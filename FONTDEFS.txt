@@ -1,0 +1,14 @@
+RADIXNUMFONT
+{
+   0 HNUMS0
+   1 HNUMS1
+   2 HNUMS2
+   3 HNUMS3
+   4 HNUMS4
+   5 HNUMS5
+   6 HNUMS6
+   7 HNUMS7
+   8 HNUMS8
+   9 HNUMS9
+   NOTRANSLATION 109	// don't touch the shadow color!
+}

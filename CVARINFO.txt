@@ -1,0 +1,5 @@
+// Radix movement CVars.
+user bool radix_threatalarm = true;
+user bool radix_armoralarm  = true;
+user bool radix_rollmove  	= false;
+server int radix_bfgtype    = 0;

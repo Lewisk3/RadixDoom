@@ -1,0 +1,47 @@
+GameInfo
+{
+	statusbarclass = "Radix_HUD"
+	AddEventHandlers = "Radix_EventHandler"
+}
+
+DoomEdNums
+{
+	13012 = NeutronCannons
+	13013 = ExProjectileCannons
+	13014 = PlasmaSpreader
+	13015 = ConventionalMissiles
+	13016 = NuclearMissiles
+	13017 = PhaseTorpedos
+	13018 = GravityWave
+	13019 = RadixShellsSmall
+	13020 = RadixShellsLarge
+	13021 = RadixShellsHuge
+	13022 = RadixMissilesSmall
+	13023 = RadixMissilesLarge
+	13024 = RadixBoomPack
+	13025 = RadixTorpedosSmall
+	13026 = RadixTorpedosLarge
+	13027 = RadixNukesSmall
+	13028 = RadixNukesLarge
+	13029 = RadixBombsSmall
+	13030 = GravityWaves
+	13031 = RadixFullArmor
+	13032 = RadixFullShields
+	13033 = RadixFullEnergy
+	13034 = RadixSuperCharge
+	13035 = RadixEnergyRegen
+	13036 = RadixShieldRegen
+	13037 = RadixUltraShield
+	13038 = RadixJets
+	// Enemies
+	13039 = BattleDrone
+	13040 = AlienFodder
+	13041 = BioMech
+	13042 = BioMine
+	13043 = LargeMine
+	13044 = LargeMine_Horz
+	13045 = LargeMine_HorzY
+	13046 = BlackBioMine
+	13047 = Skyfire
+	13048 = DefenseDrone
+}

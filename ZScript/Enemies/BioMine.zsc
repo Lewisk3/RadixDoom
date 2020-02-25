@@ -1,0 +1,83 @@
+class BioMine : Actor
+{
+
+  Default
+  {
+	  Health 200;
+	  Radius 18;
+	  Height 36;
+	  Mass 1800;
+	  Speed 6;
+	  PainChance 255;
+	  Monster;
+	  +FLOAT
+	  +FLOATBOB
+	  +NOGRAVITY
+	  +LOOKALLAROUND
+	  Scale 0.5;
+	  MinMissileChance 255;
+	  +NOBLOOD
+	  Gravity 0.2;
+	  Obituary " ";
+  }
+  
+  void MineExplodePieces()
+  {
+		vector3 npos = pos;
+		npos.z += 25;
+		let piece = ExtendedActor.Debris("Biomine_Thruster", npos, pitch, angle,180,24,24,5,3,6);
+		if (piece) piece.vel.z = random(5,12);
+		piece = ExtendedActor.Debris("Biomine_Thruster", npos, pitch, angle,180,24,24,5,3,6);
+		if (piece) piece.vel.z = random(5,12);
+		piece = Actor(ExtendedActor.Debris("Biomine_Piece1", npos, pitch, angle,180,45,45,5,2,2));
+		if(piece) piece.vel.z = random(8,16);
+		piece = Actor(ExtendedActor.Debris("Biomine_Piece2", npos, pitch, angle,180,45,45,5,2,2));
+		if(piece) piece.vel.z = random(8,16);
+		piece = Actor(ExtendedActor.Debris("Biomine_Piece3", npos, pitch, angle,90,45,45,5,6,2));
+		if(piece) piece.vel.z = random(8,16);
+  }
+
+  States
+  {
+  Spawn:
+    MINE ABCCBA 4 { A_Look(); }
+    Loop;
+  See:
+	MINE ABCCBA 4 
+	{
+		if(CheckProximity("RadixShip",45)) return ResolveState("Death");
+		A_Chase();
+		return ResolveState(Null);
+	}
+    loop;
+  Pain:
+	MINE A 1 Spawn("RobotSpark",pos);
+  goto See;
+  Missile:
+    Goto See;
+  XDeath:
+  Death:
+	TNT1 A 0 
+	{
+		MineExplodePieces();
+		A_Explode(170,80);
+		A_PlaySound("Radix/Explosion",0,1);
+	}
+	MINE A 3;
+ 	MIND DDDD random(1,3) 
+	{
+		A_Quake(1,8,0,420,"");
+		vector3 npos = pos;
+		npos.z += 25;
+		if(random(1,2)==1)A_PlaySound("Radix/Explosion",0,1);
+		let ex = Actor(ExtendedActor.Debris("RadixMissileExplosion", npos, pitch, angle,180,24,18,16,2,2));
+		if(ex) ex.A_SetScale(frandom(0.4,1.0));
+		ex = Actor(ExtendedActor.Debris("RadixMissileExplosion", npos, pitch, angle,180,8,24,36,2,2));
+		if(ex) ex.A_SetScale(frandom(0.4,1.0));
+	}
+  DeathFinal:
+	TNT1 A 0 { bFLOATBOB = false; }
+	MIND D -1;
+    Stop;
+  }
+}

@@ -1,0 +1,79 @@
+
+class ExtendedMaths : Object
+{
+	static clearscope int sign(int n)
+	{
+		return n < 0 ? -1 : 1;
+	}
+	
+	static clearscope float FInterpolate(float num, float to, float frac)
+	{
+		if(num < to) num += frac;
+		if(num > to) num -= frac;
+		if( abs(num-to) < frac ) num = to;
+		
+		return num;
+	}
+	
+	static clearscope double point_distance(Actor one, Actor two, double scale)
+	{
+		double x = one.pos.x - two.pos.x;
+		double y = one.pos.y - two.pos.y;
+		double z = one.pos.z - two.pos.z;
+		return sqrt( x*x + y*y + z*z )/scale;
+	}
+	
+	static clearscope vector3 VelocityClip(vector3 avel, float max=0)
+	{
+		if( abs(avel.x) > max ) avel.x = max*sign(avel.x);
+		if( abs(avel.y) > max ) avel.y = max*sign(avel.y);
+		if( abs(avel.z) > max ) avel.z = max*sign(avel.z);
+		
+		return avel;
+	}
+	
+	static play void DistanceDamage(Actor base, float damage=100, float distance=120, Actor neglect=null, Name damagetype="none")
+	{
+		ThinkerIterator it = ThinkerIterator.Create();
+		Actor act;
+		while(act = Actor(it.Next()))
+		{
+			if(!act.bSHOOTABLE) continue;
+			if(act == neglect) continue;
+			if(act == base) continue;
+			if(base.Distance3D(act) > distance) continue;
+			act.DamageMobj(act,base,damage,damagetype);
+		}
+	}
+}
+
+class ExtendedActor : Actor
+{	
+	static Actor Debris(class<Actor> type, vector3 spos, float spitch=0, int initang=0, float anglediff=180, float xdiff=160, float ydiff=90, float zdiff=80, int spd=6, int zspdmod = 6)
+	{
+			// Lol, taken from MechDoomer (My other project)
+			int rangle = initang+random(-anglediff,anglediff);
+			int pspeed = spd;
+			Vector3 npos = spos;
+			float xo = -(cos(rangle+90)*frandom(-xdiff,xdiff));
+			float yo = sin(rangle+90)*frandom(-ydiff,ydiff);
+			float zo = frandom(-zdiff,zdiff);
+			npos.x += xo;
+			npos.y += yo;
+			npos.z += zo;
+			let debris = Actor(Spawn(type,npos));
+			if(debris)
+			{
+				debris.A_SetRoll(random(-180,180));
+				debris.pitch = spitch;
+				debris.vel.z = sin(debris.pitch) * (zspdmod);
+				debris.vel = (
+						-(cos(rangle)*cos(spitch)),
+						-(sin(rangle)*cos(spitch)),
+						debris.vel.z
+						) * pspeed;
+				return debris;
+			}
+			return null;
+	}
+}

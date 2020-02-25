@@ -1,0 +1,337 @@
+
+
+class RadixFullArmor : Inventory replaces GreenArmor
+{
+	Default
+	{
+		Inventory.MaxAmount 1;
+		Inventory.Amount 1;
+		Scale 0.5;
+		Radius 16;
+		Height 48;
+		Inventory.PickupMessage " ";
+		Inventory.PickupSound "Radix/Item";
+	}
+	
+	override void DoEffect()
+	{
+		// This item MUST be removed after triggering!
+		if(Owner) 
+		{
+			let plr = RadixShip(Owner);
+			if(!plr) return;
+			plr.A_SetHealth(plr.maxHealth);
+			plr.SetHudText("Full armor");
+			plr.RemoveInventory(self);
+		}
+		super.DoEffect();
+	}
+	
+	States
+	{
+		Spawn:
+			ARMR ABCCBA 8;
+		loop;
+	}
+}
+
+class RadixFullShields : RadixFullArmor replaces BlueArmor
+{
+	override void DoEffect()
+	{
+		// This item MUST be removed after triggering!
+		if(Owner) 
+		{
+			let plr = RadixShip(Owner);
+			if(!plr) return;
+			plr.shields = plr.maxShields;
+			plr.SetHudText("Full shields");
+			plr.RemoveInventory(self);
+		}
+		super.DoEffect();
+	}
+
+	States
+	{
+		Spawn:
+			SHLD ABCCBA 8;
+		loop;
+	}
+}
+
+class RadixFullEnergy : RadixFullArmor replaces Stimpack
+{
+	override void DoEffect()
+	{
+		// This item MUST be removed after triggering!
+		if(Owner) 
+		{
+			let plr = RadixShip(Owner);
+			if(!plr) return;
+			plr.energy = plr.maxenergy;
+			plr.SetHudText("Full energy");
+			plr.RemoveInventory(self);
+		}
+		super.DoEffect();
+	}
+
+	States
+	{
+		Spawn:
+			ENRG ABCCBA 8;
+		loop;
+	}
+}
+
+class RadixSuperCharge : RadixFullArmor replaces Megasphere
+{
+	override void DoEffect()
+	{
+		// This item MUST be removed after triggering!
+		if(Owner) 
+		{
+			let plr = RadixShip(Owner);
+			if(!plr) return;
+			plr.energy = plr.maxenergy;
+			plr.shields = plr.maxShields;
+			plr.health = plr.maxHealth;
+			plr.SetHudText("SUPERCHARGE!");
+			plr.RemoveInventory(self);
+		}
+		super.DoEffect();
+	}
+
+	States
+	{
+		Spawn:
+			SUPC ABCCBA 8;
+		loop;
+	}
+}
+
+
+// Energy Regen
+class Power_EnergyRegen : Powerup 
+{
+	Default
+	{
+		Powerup.Duration (35*60); // 1 min
+	}
+	
+	override void DoEffect()
+	{
+		super.DoEffect();
+		if(!owner) return;
+		let plr = RadixShip(owner);
+		plr.energy += plr.energyregen*4;
+	}
+}
+class RadixEnergyRegen : PowerupGiver replaces Medikit 
+{
+	Default
+	{
+		+COUNTITEM
+		+INVENTORY.AUTOACTIVATE
+		+INVENTORY.ALWAYSPICKUP
+		+INVENTORY.BIGPOWERUP
+		Inventory.MaxAmount 0;
+		Powerup.Type "Power_EnergyRegen";
+		Inventory.PickupMessage " ";
+		Inventory.PickupSound "Radix/Item";
+		Scale 0.5;
+		Radius 24;
+		Height 48;
+	}
+		
+	override bool HandlePickup(Inventory item)
+	{
+		let plr = RadixShip(owner);
+		if(!plr) return super.HandlePickup(item);
+		plr.SetHudText("ENERGY REGEN!");
+		return super.HandlePickup(item);
+	}
+		
+	States
+	{
+		Spawn:
+			RNRG ABCCBA 8;
+		loop;
+	}
+}
+
+// Shield Regen
+class Power_ShieldRegen : Powerup
+{
+	Default
+	{
+		Powerup.Duration (35*60); // 1 min
+	}
+
+	override void DoEffect()
+	{
+		super.DoEffect();
+		if(!owner) return;
+		let plr = RadixShip(owner);
+		plr.shields += plr.shieldregen*4;
+	}
+}
+class RadixShieldRegen : PowerupGiver replaces Soulsphere
+{
+	Default
+	{
+		+COUNTITEM
+		+INVENTORY.AUTOACTIVATE
+		+INVENTORY.ALWAYSPICKUP
+		+INVENTORY.BIGPOWERUP
+		Inventory.MaxAmount 0;
+		Powerup.Type "Power_ShieldRegen";
+		Inventory.PickupMessage " ";
+		Inventory.PickupSound "Radix/Item";
+		Scale 0.5;
+		Radius 24;
+		Height 48;
+	}
+	
+	override bool HandlePickup(Inventory item)
+	{
+		let plr = RadixShip(owner);
+		if(!plr) return super.HandlePickup(item);
+		plr.SetHudText("SHIELD REGEN!");
+		return super.HandlePickup(item);
+	}
+	
+	States
+	{
+		Spawn:
+			RSLD ABCCBA 8;
+		loop;
+	}
+}
+
+// Shield Regen
+class Power_UltraShields : Powerup
+{
+	Default
+	{
+		Powerup.Duration (35*60); // 1 min
+	}
+
+	override void DoEffect()
+	{
+		super.DoEffect();
+		if(!owner) return;
+		let plr = RadixShip(owner);
+		plr.shields = plr.maxShields; 
+		plr.shield_damagemod = 0; // x0 for all damage.
+	}
+	override void EndEffect()
+	{
+		super.EndEffect();
+		if(!owner) return;
+		let plr = RadixShip(owner);
+		plr.shield_damagemod = 1;
+	}
+}
+class RadixUltraShield : PowerupGiver replaces InvulnerabilitySphere
+{
+	Default
+	{
+		+COUNTITEM
+		+INVENTORY.AUTOACTIVATE
+		+INVENTORY.ALWAYSPICKUP
+		+INVENTORY.BIGPOWERUP
+		Inventory.MaxAmount 0;
+		Powerup.Type "Power_UltraShields";
+		Inventory.PickupMessage " ";
+		Inventory.PickupSound "Radix/Item";
+		Scale 0.5;
+		Radius 24;
+		Height 48;
+	}
+	
+	override bool HandlePickup(Inventory item)
+	{
+		let plr = RadixShip(owner);
+		if(!plr) return super.HandlePickup(item);
+		plr.SetHudText("ULTRASHIELD!");
+		return super.HandlePickup(item);
+	}
+	
+	States
+	{
+		Spawn:
+			USLD ABCCBA 8;
+		loop;
+	}
+}
+
+// Jets
+class Power_Jets : Powerup replaces BlurSphere
+{
+	Default
+	{
+		Powerup.Duration (35*60); // 1 min
+	}
+
+	
+	override void DoEffect()
+	{
+		super.DoEffect();
+		if(!owner) return;
+		let plr = RadixShip(owner);
+		plr.throttle_boost = 0.2;
+	}
+	
+	override void EndEffect()
+	{
+		super.EndEffect();
+		if(!owner) return;
+		let plr = RadixShip(owner);
+		plr.throttle_boost = 0;
+	}
+	
+}
+class RadixJets : PowerupGiver
+{
+	Default
+	{
+		+COUNTITEM
+		+INVENTORY.AUTOACTIVATE
+		+INVENTORY.ALWAYSPICKUP
+		+INVENTORY.BIGPOWERUP
+		Inventory.MaxAmount 0;
+		Powerup.Type "Power_Jets";
+		Inventory.PickupMessage " ";
+		Inventory.PickupSound "Radix/Item";
+		Scale 0.5;
+		Radius 24;
+		Height 48;
+	}
+		
+	override bool HandlePickup(Inventory item)
+	{
+		let plr = RadixShip(owner);
+		if(!plr) return super.HandlePickup(item);
+		plr.SetHudText("ManeuverJets!");
+		return super.HandlePickup(item);
+	}
+		
+	States
+	{
+		Spawn:
+			AJET ABCCBA 8;
+		loop;
+	}
+}
+
+// PBomb Flash
+
+class Effect_PBombFlash : Powerup
+{
+	Default
+	{
+		Powerup.Duration ceil(35*0.3); // 0.6 secs for fade completion.
+	}
+}
+	
+	

@@ -1,0 +1,43 @@
+AddOptionMenu "OptionsMenu"
+{
+	StaticText " "
+	Submenu "Radix Options", "RadixOptions"
+}
+
+
+OptionMenu "RadixOptions"
+{
+   Title "Radix Options"
+
+   Option "Strafe Tilt", "radix_rollmove", "OnOff"
+   Option "Threat Alarm", "radix_threatalarm", "OnOff"
+   Option "Low Armor Alarm", "radix_armoralarm", "OnOff"
+   StaticText " "
+   Option "BFG Type", "radix_bfgtype", "BFGTypes"
+   StaticText "Determines what weapon the BFG becomes"
+   StaticText "0 - Gravity Wave (25%), Nuclear Missile (75%)","black"
+   StaticText "1 - Nuclear Missile (100%)","black"
+   StaticText "2 - Gravity Wave (100%)","black"
+   StaticText " "
+   StaticText " - Controls - ", "black"
+   Control "Use Plasma Bomb", "netevent \"rdx_useplasma\""
+   Control "Boost"		   , "+user3"
+   Control "Cruise Speed +", "+user1"
+   Control "Cruise Speed -", "+user2"
+   Control "Fly Up", "+jump"
+   Control "Fly Down", "+crouch"
+	
+}
+
+OptionValue "OnOff"
+{
+	0, "Disabled"
+	1, "Enabled"
+}
+
+OptionValue "BFGTypes"
+{
+	0, "Random"
+	1, "Nuclear Missile"
+	2, "Gravity Wave"
+}

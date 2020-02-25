@@ -1,0 +1,425 @@
+
+
+class Radix_HUD : BaseStatusBar
+{
+	HUDFont mHUDFont;
+	Font numFont;
+	
+	int defwidth, defheight;
+	
+	int xhair_lock;
+	int seconds_timer;
+	float fade;
+	bool dofadeout;
+	
+	bool draw_penergy;
+	bool draw_pshield;
+	bool draw_pjets;
+	bool draw_pinvul;
+	
+	Array<Int> timers;
+	
+	float HUDAlpha;
+	string TmpHUDText; // Used for displaying things like "weapon" selected stuff.
+	float TmpTextTimer; // TTT :P
+	
+	bool Blink(int tics, bool onoff, int tselect=0)
+	{
+		int dotime;
+		dotime = timers[tselect];
+		
+		if(onoff) 
+		{
+			dotime++;
+			if(dotime == tics) onoff = false;
+		}
+		else
+		{
+			dotime--;
+			if(dotime == 0) onoff = true;
+		}
+		timers[tselect] = dotime;
+		
+		return onoff;
+	}
+	
+	void H_DrawNumbers(String strnums, vector2 pos, vector2 scale=(1,1), int spacing=1, bool transp=false)
+	{	
+		// Due to the way the scaling is done this needs to be completely custom done.
+		String lmp = "HNUMS";
+		if(transp) lmp = "TNUMS";
+		for(int i = 0; i < strnums.Length(); i++)
+		{
+			String lmp_num = lmp..strnums.CharAt(i);
+			RD_SBS.DrawImage(lmp_num,pos,0,1.0,scale);
+			pos.x += (numFont.GetCharWidth("0")+spacing)*scale.x;
+		}
+	}
+
+	override void Init()
+	{
+		
+		Super.Init();
+		// SetSize(32, 320, 200);
+		
+		defwidth  = 1920;
+		defheight = 1080;
+		
+		HUDAlpha = 1.0;
+		
+		timers.Resize(4); // Setup powerup blink timers.
+
+		// Create the font used for the fullscreen HUD
+		Font fnt = "dbigfont";
+		mHUDFont = HUDFont.Create(fnt);
+		numFont = "RADIXNUMFONT";
+	}
+
+	override void Draw (int state, double TicFrac)
+	{
+		Super.Draw (state, TicFrac);
+
+		BeginHUD();
+		if(!automapactive) DrawFullScreenStuff ();
+		DrawGlobalHUD();
+	}
+
+	
+	override void Tick()
+	{
+		//console.printf("%d",seconds_timer);
+	
+		// Easy way to detect whenever another map is started.
+		if(Level.maptime == 0) seconds_timer = 0; 
+	
+		let plr = RadixShip(CPlayer.mo);
+		if(plr)
+		{
+			if(Level.maptime%35 == 0 && plr.health > 0) seconds_timer++;
+			if( TmpHUDText != plr.hVars.TextMsg ) 
+			{
+				TmpTextTimer = 35*5;
+				TmpHUDText = plr.hVars.TextMsg;
+			}
+			// Clear HUD text so we are able to print the same thing later.
+			if(TmpTextTimer <= 0 && TmpHUDText != "")
+			{
+				TmpHUDText = "";
+				plr.ClearHUDText();
+			}
+		} // We don't simply return here because super.tick.
+		
+		if(TmpTextTimer > 0) TmpTextTimer --;
+		
+		Super.tick();
+	}
+	
+	void Draw_Weapons()
+	{
+		let plr = RadixShip(CPlayer.mo);
+		if(!plr) return;
+		
+		// Draw ammo counts.
+		H_DrawNumbers(""..plr.countinv("RadixShells"),(198,956),(6.0,5.4));
+		H_DrawNumbers(""..plr.countinv("RadixMissiles"),(457,956),(6.01,5.4));
+		H_DrawNumbers(""..plr.countinv("RadixTorpedos"),(198,1015),(6.0,5.4));
+		H_DrawNumbers(""..plr.countinv("RadixNukes"),(457,1015),(6.01,5.4));
+	
+		// Display got weapons and selected weapon/weapon ammo use.
+		for( let w = plr.Inv; w != null; w = w.Inv )
+		{
+			let weap = RadixWeapon(w);
+			if(!weap) continue;
+			
+			int slotnum = weap.SlotNumber;
+			int selnum = plr.currentWeaponID;
+			int xspacing = (slotnum-1)*50;
+					
+			if(slotnum != selnum)
+			{
+				RD_SBS.DrawImage("WEAPGOT"..slotnum,(180+xspacing,902),0,1.0,(6.0,5.4));
+			}
+			else
+			{
+				RD_SBS.DrawImage("WEAPSEL"..slotnum,(175+xspacing,900),0,1.0,(6.0,5.4));
+				if(weap.AmmoType1)
+				{
+					String wammo = getDefaultByType(weap.AmmoType1).GetClassName();
+					if(wammo == "RadixShells")
+					{
+						RD_SBS.DrawImage("AMMOSEL",(192,955),0,1.0,(6.0,5.4));
+					}
+					if(wammo == "RadixMissiles")
+					{
+						RD_SBS.DrawImage("AMMOSEL",(450,955),0,1.0,(6.0,5.4));
+					}
+					if(wammo == "RadixTorpedos")
+					{
+						RD_SBS.DrawImage("AMMOSEL",(192,1014),0,1.0,(6.0,5.4));
+					}
+					if(wammo == "RadixNukes")
+					{
+						RD_SBS.DrawImage("AMMOSEL",(450,1014),0,1.0,(6.0,5.4));
+					}
+					if(wammo == "GravityWaves")
+					{
+						int num = plr.countinv("GravityWaves");
+						String formatnum = num < 10 ? "0"..num : ""..num;
+						H_DrawNumbers(formatnum,(455,768),(6.0,5.4),1,true);
+					}
+				}
+			}
+			
+		}
+	}
+	
+	void Draw_Radar(vector2 pos = (981, 926))
+	{
+		if(CPlayer && CPlayer.mo)
+		{
+			float scale = 10;
+			let plr = RadixShip(CPlayer.mo);
+			if(!plr) return;
+			ThinkerIterator act_it = ThinkerIterator.Create("Actor");
+			Actor obj;
+		
+	
+			while(obj = Actor(act_it.Next()))
+			{
+				int dis = ExtendedMaths.point_distance(obj,Actor(CPlayer.mo),scale);
+				if( dis < 70 )
+				{
+					int x = plr.pos.x - obj.pos.x;
+					int y = plr.pos.y - obj.pos.y;
+					int dx = ( y * cos((plr.angle) )) - ( x * sin((plr.angle)) );
+					int dy = ( y * sin((plr.angle) )) + ( x * cos((plr.angle)) );
+					dx /= scale;
+					dy /= scale;
+					
+					let nplr = RadixShip(obj);
+					String graphic = (nplr == plr) ? "RADARPLR" : "RADARIND";
+					if(obj.bSHOOTABLE) RD_SBS.DrawImage(graphic,(dx+pos.x,dy+pos.y),0,1.0,(3.0,3.0));
+				}
+			}
+		}
+	}
+
+	void DrawKeys()
+	{
+		if(!CPlayer) return;
+		
+		bool locks[6];
+		String image;
+		for(int i = 0; i < 6; i++) locks[i] = CPlayer.mo.CheckKeys(i + 1, false, true);
+		// key 1
+		if (locks[1] && locks[4]) image = "STKEYS6";
+		else if (locks[1]) image = "STKEYS0";
+		else if (locks[4]) image = "STKEYS3";
+		RD_SBS.DrawImage(image, (32, 48+32),0,1.0,(6.0,4.6));
+		// key 2
+		if (locks[2] && locks[5]) image = "STKEYS7";
+		else if (locks[2]) image = "STKEYS1";
+		else if (locks[5]) image = "STKEYS4";
+		else image = "";
+		RD_SBS.DrawImage(image, (32, 96+32),0,1.0,(6.0,4.6));
+		// key 3
+		if (locks[0] && locks[3]) image = "STKEYS8";
+		else if (locks[0]) image = "STKEYS2";
+		else if (locks[3]) image = "STKEYS5";
+		else image = "";
+		RD_SBS.DrawImage(image, (32, 144+32),0,1.0,(6.0,4.6));
+	}
+
+	// Drawn on Both statusbar AND Fullscreen HUD.
+	void DrawGlobalHUD()
+	{
+		if(TmpTextTimer > 0) 
+		{
+			double basescale = clamp(1.0 * (hud_scale*0.5), 1.0, 10.0);
+			vector2 fScale = (1.0*basescale, 1.0*basescale);
+			RD_SBS.DrawString("dbigfont",TmpHUDText,(16,16),0,Font.CR_ORANGE,scale:fScale);
+		}
+	}
+	
+	void DrawFullScreenStuff ()
+	{
+		let plr = RadixShip(CPlayer.mo);
+		if(!plr) return;
+		
+		// Scalar for energy bar.
+		float energyFactor = plr.energy > 0 ? plr.energy / plr.maxenergy : 0;
+		int energyScalar = (325*energyFactor);
+		// Scalar for armor.
+		float armorFactor = plr.shields > 0 ? plr.shields / plr.maxShields : 0;
+		float armorScalar = 325*armorFactor;
+		// Scalar for health.
+		float healthFactor = (plr.health > 0 && plr.MaxHealth > 0) ? float(plr.health) / plr.MaxHealth : 0;
+		float healthScalar = 325*healthFactor;
+		// Scalar for throttle
+		float throttlemod = plr.boosting ? 1.0 : plr.IsMoving() ? plr.throttle : plr.cruise;
+		
+		float throttleFactor = throttlemod > 0 ? (throttlemod*100) / 100 : 0;
+		float throttleScalar = 175*throttleFactor;
+		
+		Name wgraphic = plr.weapGraphic;
+		xhair_lock = clamp(int(plr.locktimer*10)+1, 1, 7);
+		
+		int threat = plr.Threat ? 1 : 0;
+
+		// Black Background Covers (LOL, unintentional naming totally)
+		RD_SBS.DrawImage( 
+			"CCOVERS", 
+			(0,0), 
+			RD_SBS.SS_SCREEN_CENTER | RD_SBS.SS_COORDS_TEXGRID, 
+			1.0, 
+			(6.0,5.4) 
+		);
+		
+		
+		// Cockpit
+		RD_SBS.DrawImage( 
+			"COCKPIT", 
+			(0,0), 
+			RD_SBS.SS_SCREEN_CENTER | RD_SBS.SS_COORDS_TEXGRID, 
+			1.0, 
+			(6.0,5.4) 
+		);
+		 
+		// Threat 
+		RD_SBS.DrawImage( 
+			"THREAT" .. threat, 
+			(0,145), 
+			RD_SBS.SS_SCREEN_TOP_CENTER,  
+			1.0, 
+			(6.1, 6.5) 
+		);
+		
+		// Make sure we're not in the middle of a kewl powerup animation thingy.
+		if(plr.powerup) return;
+		
+		// Radar
+		Draw_Radar();
+				
+		// Crosshair
+		RD_SBS.DrawImage( "CRSHAIR" .. xhair_lock, (0,0), RD_SBS.SS_SCREEN_CENTER, 1.0, (5.0, 3.5) );
+		
+		// Select Weapon Graphic
+		RD_SBS.DrawImage(wgraphic, (327,815), 0, 1.0, (6.0,5.4));
+		Draw_Weapons();	
+				
+		// Throttle
+		RD_SBS.SetClipRect(648, 800, throttleScalar,39, false);
+		String thrott = "THROTTLE";
+		if(plr.countinv("Power_Jets") && plr.boosting) thrott = "THRTBOST";
+		RD_SBS.DrawImage( thrott, (735,818), 0, 1.0, (6.1,5.485));
+				
+		// -- Bars -- \\
+		// Armor bar
+		RD_SBS.SetClipRect(1212, 840, healthScalar,39);
+		RD_SBS.DrawImage( "ARMRBAR", (1376,855), 0, 1.0, (6.05,4.4));		
+		// Sheild bar
+		RD_SBS.SetClipRect(1212, 920, armorScalar,39);
+		RD_SBS.DrawImage( "SHLDBAR", (1376,935), 0, 1.0, (6.05,4.4));		
+		// Energy bar
+		RD_SBS.SetClipRect(1398, 1000, energyScalar,39);
+		RD_SBS.DrawImage( "ENRGBAR", (1562,1018), 0, 1.0, (6.05,4.4));
+		// Clear all clip rects.
+		ClearClipRect(); 
+
+		// Draw PlasmaBombs (Use transparent nums)
+		RD_SBS.DrawImage( "PBOMBX", (1725,60), 0, 1.0, (6.05,3.6));
+		int numbombs = plr.countinv("RadixBombs");
+		string strbombs = numbombs < 10 ? "0"..numbombs : ""..numbombs;
+		H_DrawNumbers(strbombs,(1777,50),(6.0,4.6),1,true);
+		
+		// Draw level time.
+		int lvlmins = clamp(seconds_timer/60, 0, 99); // 99 mins maximum time.
+		int lvlsecs = seconds_timer - (lvlmins*60);
+		String secs = (lvlsecs < 10 ? "0" .. lvlsecs : ""..lvlsecs);
+		String mins = (lvlmins < 10 ? "0" .. lvlmins : ""..lvlmins);
+
+		H_DrawNumbers(secs,(738,1005),(6.0,5.4));
+		H_DrawNumbers(mins,(654,1005),(6.0,5.4));
+		
+		// Draw enemy count 
+		int kills = Level.killed_monsters;
+		int enemies = Level.total_monsters;
+		String kprefix = "";
+		String eprefix = "";
+		if(kills < 10){
+			kprefix = "00";
+		} else if(kills < 100){
+			kprefix = "0";
+		}
+		if(enemies < 10){
+			eprefix = "00";
+		} else if(enemies < 100){
+			eprefix = "0";
+		}
+		String formatkills   = kprefix .. kills;
+		String formatenemies = eprefix .. enemies;
+		
+		H_DrawNumbers(formatkills.."",(875,777),(6.1,5.4));
+		H_DrawNumbers(formatenemies.."",(1020,777),(6.01,5.4));
+		
+		let penergy = Power_EnergyRegen(plr.FindInventory("Power_EnergyRegen"));
+		let pshield = Power_ShieldRegen(plr.FindInventory("Power_ShieldRegen"));
+		let pjets   = Power_Jets(plr.FindInventory("Power_Jets"));
+		let pinvuln = Power_UltraShields(plr.FindInventory("Power_UltraShields"));
+		if(!penergy) timers[0] = 0;
+		if(!pshield) timers[1] = 0;
+		if(!pjets  ) timers[2] = 0;
+		if(!pinvuln) timers[3] = 0;
+		// Energy regen.
+		if( penergy && penergy.EffectTics <= 35*5 )
+			draw_penergy = Blink(15,draw_penergy,0);
+		else if(penergy)
+			draw_penergy = true;
+		else
+			draw_penergy = false;
+		// Shield regens
+		if( pshield && pshield.EffectTics <= 35*5 )
+			draw_pshield = Blink(15,draw_pshield,1);
+		else if(pshield)
+			draw_pshield = true;
+		else
+			draw_pshield = false;
+		// Jets.
+		if( pjets && pjets.EffectTics <= 35*5 )
+			draw_pjets = Blink(15,draw_pjets,2);
+		else if(pjets)
+			draw_pjets = true;
+		else
+			draw_pjets = false;
+		// Invulnurability (Ultrashields).
+		if( pinvuln && pinvuln.EffectTics <= 35*5 )
+			draw_pinvul = Blink(15,draw_pinvul,3);
+		else if(pinvuln)
+			draw_pinvul = true;
+		else
+			draw_pinvul = false;
+		
+		if(plr.countinv("Effect_PBombFlash"))
+		{	
+			Screen.Dim(Color(255,255,255,255), fade, 0, 0, Screen.GetWidth(), Screen.GetHeight());
+			fade += 0.06;
+			dofadeout = true;
+		}
+		else if(dofadeout)
+		{
+			if(fade <= 0) dofadeout = false;
+			Screen.Dim(Color(255,255,255,255), fade, 0, 0, Screen.GetWidth(), Screen.GetHeight());
+			fade -= 0.06;
+		}
+		
+		// Draw powerups
+		if(draw_pshield) RD_SBS.DrawImage( "POWSHLD", (1792,146), 0, 1.0, (6.0, 4.6) );
+		if(draw_penergy) RD_SBS.DrawImage( "POWENRG", (1792,238), 0, 1.0, (6.0, 4.6) );
+		if( draw_pjets ) RD_SBS.DrawImage( "POWJETS", (1792,338), 0, 1.0, (6.0, 4.6) );
+		if( draw_pinvul) RD_SBS.DrawImage( "POWUSLD", (1792,438), 0, 1.0, (6.0, 4.6) );
+		
+		//Draw doom keys
+		DrawKeys();
+		
+	}
+}

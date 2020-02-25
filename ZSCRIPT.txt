@@ -1,0 +1,35 @@
+version "3.5"
+
+#include "ZScript/radix_base.zsc"
+#include "ZScript/SBS/status_screen.zsc"
+#include "ZScript/radix_items.zsc"
+#include "ZScript/radix_projectiles.zsc"
+#include "ZScript/radix_ammos.zsc"
+#include "ZScript/radix_weapons.zsc"
+#include "ZScript/radix_player.zsc"
+#include "ZScript/radix_events.zsc"
+#include "ZScript/radix_hud.zsc"
+
+// Enemies
+#include "ZScript/Enemies/sfxbase.zsc"
+#include "ZScript/Enemies/BattleDrone.zsc"
+#include "ZScript/Enemies/AlienFodder.zsc"
+#include "ZScript/Enemies/BioMech.zsc"
+#include "ZScript/Enemies/BioMine.zsc"
+#include "ZScript/Enemies/Skyfire.zsc"
+#include "ZScript/Enemies/DefenseDrone.zsc"
+#include "ZScript/Enemies/BlackBioMine.zsc"
+#include "ZScript/Enemies/Mines.zsc"
+
+// Button types
+class btn_bool : Inventory
+{
+	Default
+	{
+		Inventory.maxamount 1;
+		Inventory.amount 1;
+	}
+}
+
+// User buttons
+class btn_useplasma : btn_bool {}

@@ -1,0 +1,407 @@
+
+// Robot SFX
+class RobotSpark : Actor
+{
+	  Default
+	  {
+		  +NOBLOCKMAP;
+		  +NOGRAVITY;
+		  +ALLOWPARTICLES;
+		  +RANDOMIZE;
+		  Scale 0.5;
+		  Mass 5;
+		  RenderStyle "Add";
+		  Alpha 1.0;
+	  }
+	  States
+	  {
+		  Spawn:
+			SPRK ABCDE 4 Bright;
+		  stop;
+	  }
+}
+
+class BattleDrone_Piece : Actor
+{
+	Default
+	{
+		-NOGRAVITY;
+		-SOLID;
+		Vspeed -1;
+		Scale 0.3;
+	}
+	
+	void SpawnSmoke()
+	{
+		let smoke = Actor(Spawn("RadixSmokeTrail_Fast",pos)); 
+		if(smoke)smoke.alpha = 0.13;
+	}
+	
+	States
+	{
+		Spawn:
+			DROC AAAAAAAAAAAAAAA 1 SpawnSmoke();
+		Death:
+			DROC A 1 A_FadeOut(0.08);
+		wait;
+	}
+}
+class Biomech_Piece : BattleDrone_Piece
+{
+	States
+	{
+		Spawn:
+			BIOC AAAAAAAAAAAAAAA 1 SpawnSmoke();
+		Death:
+			BIOC A 1 A_FadeOut(0.08);
+		wait;
+	}
+}
+
+ class BattleDrone_Arm : BattleDrone_Piece
+ {
+ 
+	States
+	{
+		Spawn:
+			DROA A 12;
+		Death:
+			DROA A 1 A_FadeOut(0.08);
+		wait;
+	}
+ }
+ 
+ class BattleDrone_ArmWeapon : BattleDrone_Piece
+ {
+	States
+	{
+		Spawn:
+			DROW ABCDEFGH 3 SpawnSmoke();
+			TNT1 A 0 A_Jump(127,"Death2");
+		Death1:
+			DROW A -1;
+		stop;
+		Death2:
+			DROW E -1;
+		stop;
+	}
+ }
+ 
+ class EnergyExplosion : RadixMissileExplosion
+ {
+
+	Default
+	{
+		Vspeed 0;
+		Speed 0;
+		Scale 0.4;
+	}
+
+	States
+	{
+		Spawn:
+			EXP2 ABCDE 4;
+		Death:
+			EXP2 E 2 A_FadeOut(0.06);
+		stop;
+	}
+ }
+ 
+ class DroneExplosionSmoke : RadixMissileSmoke
+ {
+	
+	States
+	{
+		Spawn:
+			SMK2 ABCDE 4;
+		Death:
+			SMK2 E 2 A_FadeOut(0.08);
+		wait;
+	}
+ }
+ 
+ // DefenseDrone Pieces
+class DefenseDrone_Pylon : BattleDrone_ArmWeapon
+{
+	Default
+	{
+		+NOGRAVITY
+		VSpeed 0;
+		Projectile;
+		Scale 0.6;
+	}
+
+	States
+	{
+		Spawn:
+			DEFC ABCDEFGH 3
+			{
+				A_PlaySound("Radix/Explosion",0,1);
+				let ex = Actor(ExtendedActor.Debris("RadixMissileExplosion", pos, pitch, angle,180,24,18,16,0,0));
+				if(ex) ex.A_SetScale(frandom(0.6,1.0));
+				ex = Actor(ExtendedActor.Debris("RadixMissileExplosion", pos, pitch, angle,180,8,24,36,0,0));
+				if(ex) ex.A_SetScale(frandom(0.6,1.0));
+			}
+		Death:
+			TNT1 A 0 { bNOGRAVITY = false; }
+			TNT1 A 0 A_Jump(127,"Death2");
+		Death1:
+			DEFC A 1 A_FadeOut(0.001);
+		wait;
+		Death2:
+			DEFC E 1 A_FadeOut(0.001);
+		wait;
+	}
+ }
+ 
+ 
+ // Skyfire Pieces
+class Skyfire_Wing : BattleDrone_ArmWeapon
+{
+	States
+	{
+		Spawn:
+			SKYW ABCDEFGH 3;
+			TNT1 A 0 A_Jump(127,"Death2");
+		Death1:
+			SKYW A -1;
+		stop;
+		Death2:
+			SKYW E -1;
+		stop;
+	}
+ }
+class Skyfire_PieceLarge : BattleDrone_Piece
+{
+	States
+	{
+		Spawn:
+			TNT1 A 0 NoDelay A_Jump(127,"SpawnB");
+		SpawnA:
+			SKYC A 75;
+		goto Death;
+		SpawnB:
+			SKYC B 75;
+		goto Death;
+		Death:
+			SKYC "#" 1 A_FadeOut(0.04);
+		wait;
+	}
+}
+class Skyfire_PieceSmall : BattleDrone_Piece
+{
+	States
+	{
+		Spawn:
+			TNT1 A 0 NoDelay A_Jump(127,"SpawnB");
+			TNT1 A 0 A_Jump(127,"SpawnC");
+			TNT1 A 0 A_Jump(127,"SpawnD");
+		SpawnA:
+			SKYC C 75;
+		goto Death;
+		SpawnB:
+			SKYC D 75;
+		goto Death;
+		SpawnC:
+			SKYC E 75;
+		goto Death;
+		SpawnD:
+			SKYC F 75;
+		goto Death;
+		Death:
+			SKYC "#" 1 A_FadeOut(0.04);
+		wait;
+	}
+}
+ 
+ // Bio-Mine pieces
+class Biomine_Thruster : BattleDrone_ArmWeapon
+{
+	States
+	{
+		Spawn:
+			MINC ABCDEFGH 3;
+			TNT1 A 0 A_Jump(127,"Death2");
+		Death1:
+			MINC A -1;
+		stop;
+		Death2:
+			MINC E -1;
+		stop;
+	}
+ }
+class Biomine_Piece1 : BattleDrone_Piece
+{
+	States
+	{
+		Spawn:
+			MIND AAAAAAAAAAAAAAA 1 SpawnSmoke();
+		Death:
+			MIND A 1 A_FadeOut(0.002);
+		wait;
+	}
+}
+class Biomine_Piece2 : Biomine_Piece1
+{
+	States
+	{
+		Spawn:
+			MIND BBBBBBBBBBBBBBB 1 SpawnSmoke();
+		Death:
+			MIND B 1 A_FadeOut(0.002);
+		wait;
+	}
+}
+class Biomine_Piece3 : Biomine_Piece1
+{
+	States
+	{
+		Spawn:
+			MIND CCCCCCCCCCCCCCC 1 SpawnSmoke();
+		Death:
+			MIND C 1 A_FadeOut(0.002);
+		wait;
+	}
+}
+// Black Biomine
+class BlackBiomine_Piece : BattleDrone_Piece
+{
+	States
+	{
+		Spawn:
+			TNT1 A 0 NoDelay A_Jump(127,"SpawnB");
+			TNT1 A 0 A_Jump(127,"SpawnC");
+			TNT1 A 0 A_Jump(127,"SpawnD");
+		SpawnA:
+			BMNC A 75;
+		goto Death;
+		SpawnB:
+			BMNC B 75;
+		goto Death;
+		SpawnC:
+			BMNC C 75;
+		goto Death;
+		SpawnD:
+			BMNC D 75;
+		goto Death;
+		Death:
+			BMNC "#" 1 A_FadeOut(0.04);
+		wait;
+	}
+}
+class BlackBiomine_Top : BattleDrone_ArmWeapon
+{
+	Default
+	{
+		Projectile;
+		Scale 0.6;
+	}
+
+	States
+	{
+		Spawn:
+			BMND AAAAAA 3
+			{
+				A_PlaySound("Radix/Explosion",0,1);
+				let ex = Actor(ExtendedActor.Debris("RadixMissileExplosion", pos, pitch, angle,180,24,18,16,0,0));
+				if(ex) ex.A_SetScale(frandom(0.6,1.0));
+				ex = Actor(ExtendedActor.Debris("RadixMissileExplosion", pos, pitch, angle,180,8,24,36,0,0));
+				if(ex) ex.A_SetScale(frandom(0.6,1.0));
+			}
+		Death:
+			TNT1 A 0 { bNOGRAVITY = false; }
+			BMND A -1;
+		stop;
+	}
+ }
+class BlackBiomine_Bottom : BlackBiomine_Top
+{
+	States
+	{
+		Spawn:
+			BMND CCCCCC 3
+			{
+				A_PlaySound("Radix/Explosion",0,1);
+				let ex = Actor(ExtendedActor.Debris("RadixMissileExplosion", pos, pitch, angle,180,24,18,16,0,0));
+				if(ex) ex.A_SetScale(frandom(0.6,1.0));
+				ex = Actor(ExtendedActor.Debris("RadixMissileExplosion", pos, pitch, angle,180,8,24,36,0,0));
+				if(ex) ex.A_SetScale(frandom(0.6,1.0));
+			}
+		Death:
+			TNT1 A 0 { bNOGRAVITY = false; }
+			BMND C -1;
+		stop;
+	}
+ }
+ 
+ // Alien SFX
+ class AlienBlood : RobotSpark
+ {
+	Default
+	{
+		RenderStyle "Normal";
+		Scale 1.5;
+	}
+ 
+	States
+	{
+		Spawn:
+			ABLD ABCD 4;
+		FadeOut:
+			ABLD D 1 A_FadeOut(0.1);
+		wait;
+	}
+ }
+ 
+ class AlienChunks : BattleDrone_Piece
+ {
+	Default
+	{
+		Scale 1.0;
+	}
+ 
+	States
+	{
+		Spawn:
+			TNT1 A 0 NoDelay A_Jump(127,"SpawnB");
+			TNT1 A 0 A_Jump(127,"SpawnC");
+			TNT1 A 0 A_Jump(127,"SpawnD");
+		SpawnA:
+			ALNC A 75;
+		goto Death;
+		SpawnB:
+			ALNC B 75;
+		goto Death;
+		SpawnC:
+			ALNC C 75;
+		goto Death;
+		SpawnD:
+			ALNC D 75;
+		goto Death;
+		Death:
+			ALNC "#" 1 A_FadeOut(0.04);
+		wait;
+	}
+ }
+ 
+ class AlienHead : BattleDrone_ArmWeapon
+ {
+	Default
+	{
+		Scale 0.8;
+	}
+ 
+	States
+	{
+		Spawn:
+			ALNH ABCDEFGH 3;
+			TNT1 A 0 A_Jump(127,"Death2");
+		Death1:
+			ALNH A -1;
+		stop;
+		Death2:
+			ALNH E -1;
+		stop;
+	}
+ }
+ 

@@ -1,0 +1,74 @@
+
+
+pointlight BluePointLight
+{
+    color 0.0 0.0 1.0
+    size 45
+}
+
+pointlight RedPointLight
+{
+    color 1.0 0.0 0.0
+    size 24
+}
+
+
+pointlight MiniExplosionPointLight
+{
+    color 0.7 0.5 0.0
+    size 16
+}
+
+pointlight LargeExplosionPointLight
+{
+    color 0.7 0.5 0.0
+    size 48
+}
+
+
+Object BattleDrone_Laser
+{
+	Frame ENRG { light RedPointLight }
+}
+
+Object AlienLaser
+{
+	Frame ALNP { light RedPointLight }
+}
+
+Object Skyfire_Laser
+{
+	Frame LASR { light RedPointLight }
+}
+
+
+Object NeutronBall
+{
+	Frame NEUT { light BluePointLight }
+	Frame PLSM { light BluePointLight }
+}
+
+Object RadixTorpedo
+{
+	Frame PTRP { light RedPointLight }
+}
+Object RadixTorpedoSingle
+{
+	Frame PTRP { light RedPointLight }
+}
+
+Object RadixMissileExplosion
+{
+	Frame EXPL { light LargeExplosionPointLight }
+}
+
+Object WanderingPlasma
+{
+	Frame PLSM { light BluePointLight }
+}
+
+
+Object ExplosivePuff 
+{
+	Frame EXPP { light MiniExplosionPointLight }
+}

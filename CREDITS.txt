@@ -1,0 +1,13 @@
+
+Neutron Cannon sounds:
+	Fire sound (http://soundbible.com/472-Laser-Blasts.html)
+	Hit sound - Mechwarrrior 2 Laser Impact
+
+Exposive Projectile Cannon sound:
+	Fire sound; an edited version of - (http://soundbible.com/1179-44-Magnum.html)
+	
+Plasma Bomb sounds:
+	Fire sound; an edited version of - (http://soundbible.com/470-Laser-Blaster.html)
+
+RadixShip sounds:
+	Boost sound - (http://soundbible.com/1492-Rocket-Thrusters.html)

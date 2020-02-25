@@ -1,0 +1,70 @@
+
+// Weapons
+Radix/NeutronBall/fire NEUTFIRE
+Radix/NeutronBall/impact NEUTHIT
+Radix/ExplosiveCannon/fire EXPCFIRE
+Radix/PlasmaSpreader/fire SPRDFIRE
+Radix/PhaseTorpedos/fire TORPFIRE
+Radix/ConvMissiles/fire MISLFIRE
+Radix/Nuke/fire NUKEFIRE
+Radix/GravityWave GRAVWAVE
+
+// Ship
+RadixShip/EngineSpur ENGLOOP
+RadixShip/NotRadix/Powerup PWRUP
+RadixShip/Boost BOOST
+RadixShip/Threat ALARM
+RadixShip/LowArmor LOWARMR
+RadixShip/Hurt SHIPHIT
+
+// Misc
+Radix/Explosion REXPLD
+Radix/PlasmaBomb PBOMB
+Radix/Item PICKITEM
+
+//Enemies
+Radix/EnemyFire ENRGFIRE
+Radix/Drone/See DRNESEE
+Radix/Alien/Death ALNDEATH
+
+
+$volume RadixShip/LowArmor 0.3;
+$volume RadixShip/Threat 0.3
+$volume RadixShip/EngineSpur 0.25
+
+$playersound	RadixPlayer	male	*death		REXPLD
+$playersound	RadixPlayer	male	*xdeath		REXPLD
+$playersound	RadixPlayer	male	*gibbed		REXPLD
+$playersound	RadixPlayer	male	*pain100	SHIPHIT
+$playersound	RadixPlayer	male	*pain75		SHIPHIT
+$playersound	RadixPlayer	male	*pain50		SHIPHIT
+$playersound	RadixPlayer	male	*pain25		SHIPHIT
+$playersound	RadixPlayer	male	*grunt		nosound
+$playersound	RadixPlayer	male	*land		nosound
+$playersound	RadixPlayer	male	*jump		nosound
+$playersound	RadixPlayer	male	*fist		nosound
+$playersound	RadixPlayer	male	*usefail	nosound
+$playersound	RadixPlayer	female	*death		REXPLD
+$playersound	RadixPlayer	female	*xdeath		REXPLD
+$playersound	RadixPlayer	female	*gibbed		REXPLD
+$playersound	RadixPlayer	female	*pain100	SHIPHIT
+$playersound	RadixPlayer	female	*pain75		SHIPHIT
+$playersound	RadixPlayer	female	*pain50		SHIPHIT
+$playersound	RadixPlayer	female	*pain25		SHIPHIT
+$playersound	RadixPlayer	female	*grunt		nosound
+$playersound	RadixPlayer	female	*land		nosound
+$playersound	RadixPlayer	female	*jump		nosound
+$playersound	RadixPlayer	female	*fist		nosound
+$playersound	RadixPlayer	female	*usefail	nosound
+$playersound	RadixPlayer	other	*death		REXPLD
+$playersound	RadixPlayer	other	*xdeath		REXPLD
+$playersound	RadixPlayer	other	*gibbed		REXPLD
+$playersound	RadixPlayer	other	*pain100	SHIPHIT
+$playersound	RadixPlayer	other	*pain75		SHIPHIT
+$playersound	RadixPlayer	other	*pain50		SHIPHIT
+$playersound	RadixPlayer	other	*pain25		SHIPHIT
+$playersound	RadixPlayer	other	*grunt		nosound
+$playersound	RadixPlayer	other	*land		nosound
+$playersound	RadixPlayer	other	*jump		nosound
+$playersound	RadixPlayer	other	*fist		nosound
+$playersound	RadixPlayer	other	*usefail	nosound

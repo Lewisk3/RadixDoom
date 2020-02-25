@@ -1,0 +1,321 @@
+
+class ImmobilePlayer : DoomPlayer
+{
+	Default
+	{
+		Speed 0;
+		Health 200;
+		Player.MaxHealth 200;
+		Radius 24;
+		Height 12;
+		Mass 100;
+		PainChance 255;
+		Player.ViewHeight 16;
+		Player.StartItem "";
+		Player.JumpZ 0;
+		Gravity 0;
+	}
+	
+	override bool CanCrouch() const { return false; } // Disable crouch.
+	
+}
+
+
+class RadixShip : ImmobilePlayer
+{
+	// Bools
+	bool backingup;
+	bool boosting;
+	bool powerup;
+
+	// Floats
+	float dspd, dfriction, throttle, cruise;
+	float rpitch_min, rpitch_max;
+	float lockspd, locktimer;
+	float energy, maxenergy, energyregen;
+	float shields, maxShields, shieldregen;
+	float bobdir, bobmaxz, bobspd, bobcount;
+	float defviewheight;
+	float timer;
+
+	//Ints
+	int currentWeaponID;
+	int start_angle;
+
+	// Strings
+	string HUDText;
+	
+	// Names
+	Name weapGraphic;
+	
+	// Actors
+	Actor locked_target;
+	RadixWeapon currentWeapon;
+
+	property Move : dspd, dfriction;
+	property CPitch : rpitch_min, rpitch_max;
+	property LockOnSpeed : lockspd;
+	property SetupEnergy : maxenergy, energyregen;
+	property SetupShields : shields, maxShields, shieldregen;
+	property IdleBob      : bobspd, bobmaxz;
+
+	Default
+	{
+		DamageFactor "RadixExplosivePuff", 0;
+		RadixShip.Move 24, 0.97;
+		RadixShip.LockOnSpeed 0.04;
+		RadixShip.CPitch -50, 35;
+		RadixShip.SetupEnergy 100, 0.01;
+		RadixShip.SetupShields 500, 500, 0.05;
+		RadixShip.IdleBob 0.26, 8;
+		Player.StartItem "NeutronCannons";
+	}
+	
+	// I seriously hate the way armor is setup in Doom, it's easier just to do this for the shields.
+	override int DamageMobj(Actor inflictor, Actor source, int damage, Name mod, int flags, double angle)
+	{
+		if(mod == "RadixExplosivePuff") return 0;
+		if(shields >= damage) 
+		{
+			shields -= damage;
+		}
+		else
+		{
+			// Allow remaining shield to slighly dampen the damage.
+			int dmod = damage-shields;
+			if(shields > 0) shields = 0;
+			A_Quake(4,6,0,1,""); // Radix has this so, here it is.
+			return super.DamageMobj(inflictor,source,dmod,mod,flags,angle);
+		}
+		return 0;
+	}
+	
+	clearscope bool isMoving()
+	{
+		let btns = player.cmd.buttons;
+		return btns & BT_FORWARD || btns & BT_BACK || btns & BT_MOVELEFT || btns & BT_MOVERIGHT;
+	}
+	
+	void SetHUDText(String txt)
+	{
+		HUDText = txt;
+	}
+	
+	void BobZ()
+	{
+		vector3 npos = (pos.x, pos.y, pos.z);
+		npos.z += bobspd*bobdir;
+		bobcount += bobspd;
+		if( bobcount > bobmaxz ){ bobdir *= -1; bobcount = 0; }
+		
+		setXYZ(npos);
+	}
+	
+
+	void update_target()
+	{
+		// Check for enemy undercrosshair, commence lock on.
+		FTranslatedLineTarget lt;
+		AimLineAttack(angle, 64*32, lt);
+		if(lt.linetarget)
+		{
+			if(locked_target != Actor(lt.linetarget)) locktimer = 0;
+			locked_target = Actor(lt.linetarget);
+			// A cheap way of doing the lock on crosshair, cap at .7 as there are 7 total crosshairs.
+			locktimer = clamp(locktimer + lockspd, 0, 0.7);
+		}
+		else
+		{
+			locktimer = 0;
+		}
+		
+		if(!locked_target || !IsVisible(locked_target, false))
+		{
+			locktimer = 0;
+		}
+	}
+	
+	virtual void RadixMove(double aoff=0, double poff=0, bool useang=true, bool usepitch=true)
+	{
+		float smod = (backingup ? 0.5 : 0.7);
+		float nangle = int(angle);
+		if(useang)
+		{
+			vel.x += (cos(nangle+aoff)*(dfriction*smod));
+			vel.y += (sin(nangle+aoff)*(dfriction*smod));
+		}
+		if(usepitch)vel.z -= sin(pitch+poff)*(dfriction*smod);
+		vel = ExtendedMaths.VelocityClip(vel, dspd*smod);
+	}
+	
+	virtual void RadixStrafe(double aoff=0)
+	{
+		vel.x += cos(angle+aoff)*dfriction;
+		vel.y += sin(angle+aoff)*dfriction;
+		if( vel.x > dspd ) vel.x = dspd*ExtendedMaths.sign(vel.x);
+		if( vel.y > dspd ) vel.y = dspd*ExtendedMaths.sign(vel.y);
+	}
+	
+	RadixWeapon GetInitialWeapon(String weap, RadixWeapon notw=null)
+	{
+		for(let w = Inv; w != null; w = w.Inv)
+		{
+			if(!RadixWeapon(w)) continue; // Skip if not a weapon.
+			if( (w is weap) && (RadixWeapon(w) != notw || notw == null) ) 
+			{
+				// If we found a weapon of weap type and it's unique to notw.
+				return RadixWeapon(w);
+			}
+		}
+		return null;
+	}
+	
+	
+	void update_movement()
+	{
+		uint btns = player.cmd.buttons;
+		
+		energy = clamp(energy,0,maxenergy);
+		
+		bool otherButtons = (btns & BT_MOVELEFT || btns & BT_MOVERIGHT);
+		
+		if(btns & BT_FORWARD) 
+		{
+			throttle += .1;
+			backingup = false; 
+			RadixMove(0,0,1,!otherButtons); 
+		}
+		if(btns & BT_BACK) 
+		{ 
+			throttle += .1;
+			backingup = true;
+			RadixMove(180,180,1,!otherButtons);
+		} else { backingup = false; } 
+		
+		if( btns & BT_MOVELEFT  ) RadixStrafe(90);
+		if( btns & BT_MOVERIGHT ) RadixStrafe(-90); 
+		if( btns & BT_JUMP      ) RadixMove(0,-90,false);
+		if( btns & BT_CROUCH    ) RadixMove(0, 90,false);
+		if( btns & BT_USER1     ) cruise = clamp(cruise+0.1,0,0.8);
+		if( btns & BT_USER2     ) cruise = clamp(cruise-0.1,0,0.8);
+		boosting = (btns & BT_USER3);
+		
+		pitch = clamp(pitch, rpitch_min, rpitch_max);
+		throttle = clamp(throttle, 0, backingup ? 0.4 : 0.8);
+		
+		if( !isMoving() ) 
+		{
+			vel *= 0.93;
+			if(throttle > 0) throttle -= .3;
+			if(health > 0)BobZ(); // Bob up and down when idle.
+		}
+		else
+		{
+			bobcount = 0;
+		}
+		
+		// Cruise 
+		
+		if(cruise > 0 || boosting)
+		{
+			float cruisemod = boosting ? 2.0 : cruise;
+			vel.x += (cos(angle)*(dfriction*cruisemod));
+			vel.y += (sin(angle)*(dfriction*cruisemod));
+			vel.z -= (sin(pitch)*(dfriction*cruisemod));
+			vel = ExtendedMaths.VelocityClip(vel, dspd*cruisemod);
+		}
+	
+	}
+	
+	void update_weapons()
+	{	
+		// Cycle through inventory, removing any non-radix weapons.
+		for( let w = Inv; w != null; w = w.Inv )
+		{
+			let weap = RadixWeapon(w);
+			if(!weap && Weapon(w)) 
+			{
+				RemoveInventory(w);
+				continue;
+			}
+			if(player.ReadyWeapon == w)
+			{
+				weapGraphic = weap.selectGraphic;
+				currentWeapon = weap;		
+				currentWeaponID = weap.SlotNumber;
+			}
+		}
+	}
+	
+	void dopowerup()
+	{
+		if(timer == 0)
+		{
+			A_PlaySound("RadixShip/NotRadix/Powerup",CHAN_BODY);		
+			timer = level.maptime;
+		}
+		else if(level.maptime - timer > 35*3)
+		{
+			powerup = false;
+			A_PlaySound("RadixShip/EngineSpur",CHAN_BODY,true);
+		}
+	}
+	
+	
+	override void tick()
+	{	
+		update_target();
+		if(powerup) 
+		{
+			dopowerup();
+			angle = start_angle;
+			pitch = 0;
+			A_StopSoundEx("AMBIENT");
+		}
+		if(health < 0) vel *= 0.8;
+		if(!powerup && health > 0)update_movement();
+		update_weapons();
+		
+		// Trigger special pickups.
+		if(countinv("RadixFullArmor")) 
+		{
+			health = maxHealth;
+			A_TakeInventory("RadixFullArmor",999);
+		}
+		if(countinv("RadixFullShields")) 
+		{
+			shields = maxShields;
+			A_TakeInventory("RadixFullShields",999);
+		}
+		if(countinv("RadixFullEnergy")) 
+		{
+			energy = maxenergy;
+			A_TakeInventory("RadixFullEnergy",999);
+		}
+		
+		if(health <= 0) 
+		{
+			A_StopSound(CHAN_BODY);
+		}
+		
+		// Regenerate resources
+		energy = clamp(energy+energyregen, 0, maxenergy);
+		shields = clamp(shields + shieldregen, 0, maxShields);
+		
+		super.Tick();
+	}
+	
+	override void PostBeginPlay()
+	{
+		start_angle = angle;
+		powerup=false;
+		bobdir = 1;
+		defviewheight = viewheight;
+		energy = maxenergy;
+		
+		// Play engine ambient sound.
+		if(!powerup)A_PlaySound("RadixShip/EngineSpur",CHAN_BODY,true);
+		
+		super.postBeginPlay();
+	}
+}

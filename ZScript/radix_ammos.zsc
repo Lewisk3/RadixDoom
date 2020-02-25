@@ -1,0 +1,309 @@
+
+// Shell: 5000, Missile: 400, Torpedo: 1500, Nuke: 50
+
+class EmptyItem : Actor
+{
+	States
+	{
+		Spawn:
+			TNT1 A 1;
+		stop;
+	}
+}
+
+// Unused weapons.
+class EmptyChainsaw : EmptyItem replaces Chainsaw {}
+
+// Clear unused items.
+class EmptyClip     : EmptyItem replaces Clip {}
+class EmptyClipBox  : EmptyItem replaces ClipBox {}
+class EmptyHBonus   : EmptyItem replaces HealthBonus {}
+class EmptyABonus   : EmptyItem replaces ArmorBonus {}
+
+// Default ammo item with HUD texting.
+class RadixAmmoInv : Inventory
+{
+	string PickupText;
+	class <Ammo> AmmoType;
+	int AmmoGive;
+	
+	Property Setup : AmmoType, AmmoGive, PickupText;
+	
+	Default
+	{	
+		Scale 0.5;
+		Radius 16;
+		Height 48;
+		Inventory.PickupMessage " ";
+		Inventory.PickupSound " ";
+	}
+	
+	override void Tick()
+	{
+		if(Owner)
+		{
+			let plr = RadixShip(Owner);
+			if(plr)
+			{
+				if(plr.countinv(GetDefaultByType(AmmoType).getClassName()) < GetDefaultByType(AmmoType).maxamount)
+				{
+					plr.SetHudText(PickupText);
+					plr.GiveInventory(AmmoType, AmmoGive);
+					A_PlaySound("Radix/Item");
+				}
+				else
+				{
+					Spawn(GetClassName(),pos);
+					GoAwayAndDie();
+				}
+			}
+			GoAwayAndDie();
+		}
+		super.Tick();
+	}
+}
+
+// Shells
+class RadixShells : Ammo
+{
+	Default
+	{
+		Inventory.MaxAmount 5000;
+		Inventory.Amount 1;
+	}
+}
+
+class RadixShellsSmall : RadixAmmoInv replaces Shell
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixShells", 250, "250 shells acquired.";
+	}
+	States
+	{
+		Spawn:
+			SHLS ABCCBA 8;
+		loop;
+	}
+}
+class RadixShellsLarge : RadixAmmoInv replaces ShellBox
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixShells", 500, "500 shells acquired.";
+	}
+	States
+	{
+		Spawn:
+			SHLL ABCCBA 8;
+		loop;
+	}
+}
+class RadixShellsHuge : RadixAmmoInv // Unused in base Doom
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixShells", 1000, "1000 shells acquired.";
+	}
+	States
+	{
+		Spawn:
+			SHLE ABCCBA 8;
+		loop;
+	}
+}
+
+
+// Missiles
+class RadixMissiles : Ammo 
+{
+	Default
+	{
+		Inventory.MaxAmount 400;
+		Inventory.Amount 1;
+	}
+	
+}
+
+class RadixMissilesSmall : RadixAmmoInv replaces RocketAmmo
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixMissiles", 20, "20 missiles acquired";
+	}
+	States
+	{
+		Spawn:
+			MSLS ABCCBA 8;
+		loop;
+	}
+}
+class RadixMissilesLarge : RadixAmmoInv replaces RocketBox
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixMissiles", 50, "50 missiles acquired";
+	}
+	States
+	{
+		Spawn:
+			MSLL ABCCBA 8;
+		loop;
+	}
+}
+class RadixBoomPack : RadixAmmoInv replaces Berserk
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixMissiles", 400, "Boom box :)";
+	}
+	States
+	{
+		Spawn:
+			MSLE ABCCBA 8;
+		loop;
+	}
+}
+
+// Torpedos
+class RadixTorpedos : Ammo
+{
+	Default
+	{
+		Inventory.MaxAmount 1500;
+		Inventory.Amount 1;
+	}
+	
+}
+
+class RadixTorpedosSmall : RadixAmmoInv // Randomized as CellPack
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixTorpedos", 15, "15 torpedos acquired";
+	}
+	States
+	{
+		Spawn:
+			TRPS ABCCBA 8;
+		loop;
+	}
+}
+class RadixTorpedosLarge : RadixAmmoInv // Randomized as CellPack
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixTorpedos", 75, "75 torpedos acquired";
+	}
+	States
+	{
+		Spawn:
+			TRPL ABCCBA 8;
+		loop;
+	}
+}
+// 25% Chance for large torpedos
+class RadixTorpedosSpawner : Actor replaces CellPack
+{
+	override void PostBeginPlay()
+	{
+		int pick = random(0,100);
+		if(pick <= 25) Spawn("RadixTorpedosLarge",pos); 
+		if(pick  > 25) Spawn("RadixTorpedosSmall",pos);
+		Die(self,self);
+	}
+}
+
+
+// Nukes
+class RadixNukes : Ammo
+{
+	Default
+	{
+		Inventory.MaxAmount 50;
+		Inventory.Amount 10;
+	}
+}
+
+class RadixNukesSmall : RadixAmmoInv 
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixNukes", 4, "4 nukes acquired";
+	}
+	States
+	{
+		Spawn:
+			NUKS ABCCBA 8;
+		loop;
+	}
+}
+class RadixNukesLarge : RadixAmmoInv 
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixNukes", 10, "10 nukes acquired";
+	}
+	States
+	{
+		Spawn:
+			NUKL ABCCBA 8;
+		loop;
+	}
+}
+// 25% Chance for large nukes
+class RadixNukesSpawner : Actor replaces Cell
+{
+	override void PostBeginPlay()
+	{
+		int pick = random(0,100);
+		if(pick <= 25) Spawn("RadixNukesLarge",pos); 
+		if(pick  > 25) Spawn("RadixNukesSmall",pos);
+		Die(self,self);
+	}
+}
+
+
+// PlasmaBomb
+class RadixBombs : Ammo replaces Backpack
+{
+	Default
+	{
+		Inventory.MaxAmount 99;
+		Inventory.Amount 1;
+	}
+}
+
+class RadixBombsSmall : RadixAmmoInv replaces Backpack
+{
+	Default
+	{
+		RadixAmmoInv.Setup "RadixBombs", 1, "plasma bomb acquired";
+	}
+	States
+	{
+		Spawn:
+			PBOM ABCCBA 8;
+		loop;
+	}
+}
+
+// GravityWaves 
+// * Exclusively obtained from the weapon itself.
+
+class GravityWaves : Ammo
+{
+	Default
+	{
+		Inventory.MaxAmount 15;
+		Inventory.Amount 1;
+		Inventory.PickupMessage " ";
+		Inventory.PickupSound "Radix/Item";
+	}
+}
+
+
+
+
+
+

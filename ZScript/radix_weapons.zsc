@@ -1,0 +1,796 @@
+
+
+class RadixWeapon : Weapon
+{
+	String WeapName;
+	Name selectGraphic;
+	bool energyWeapon;
+	float energyUse;
+	float energyGive;
+	bool idle;
+	Actor missile_one;
+	Actor missile_two;
+	
+	int stages; // Used for upgrades.
+	int level; // Incremented at specific stages.
+	
+	property RadixTag : WeapName;
+	property SelectedGraphic : selectGraphic;
+	property isEnergyWeapon : energyWeapon, energyUse, energyGive;
+	
+	Default
+	{
+		Tag " ";
+		Radius 24;
+		Height 48;
+		+WEAPON.AMMO_OPTIONAL;
+		+Inventory.ALWAYSPICKUP;
+		Inventory.PickupMessage " ";
+		Inventory.PickupSound "Radix/Item";
+	}
+	
+	override bool HandlePickup (Inventory item)
+	{
+		if(item.getClassName() == getClassName())
+		{
+			let plr = RadixShip(Owner);
+			if(!plr) return super.HandlePickup(item);
+			
+			// If we picked up a weapon we already have, upgrade it.
+			if( plr.countinv(item.getClassName()) )
+			{
+				RadixWeapon w = plr.getInitialWeapon(item.getClassName());
+				if(w)w.UpgradeStages();
+			}
+		
+			// Handle energy gain when picked up.
+			if(energyGive > 0) plr.energy += energyGive;
+		}
+		return super.HandlePickup(item);
+	}
+
+	void UpgradeStages()
+	{
+		stages++;
+		StageLevels();
+	}
+	
+	virtual void StageLevels()
+	{
+		let plr = RadixShip(Owner);
+		if(!plr) return;
+		
+		switch(stages)
+		{
+			case 1: plr.SetHudText("Level 2 " .. WeapName .. " acquired"); level=1; break;
+			case 2: plr.SetHudText("1 powerup required for next level"); level=1; break;
+			case 3: plr.SetHudText("Level 3 " .. WeapName .. " acquired"); level=2; break;
+			case 4: plr.SetHudText("2 powerups required for next level"); break;
+			case 5: plr.SetHudText("1 powerup required for next level"); break;
+			case 6: plr.SetHudText("Level 4 " .. WeapName .. " acquired"); level=3; break;
+			default: // Don't print anything.
+		}
+	}
+
+	action void A_TakeEnergy(float amt)
+	{
+		let plr = RadixShip(self);
+		if(!plr) return;
+		
+		plr.energy -= amt;
+	}
+	
+	action void A_ShowWeaponSelected()
+	{
+		let plr = RadixShip(self);
+		if(!plr) return;
+		
+		plr.SetHudText(invoker.WeapName .. " SELECTED");
+	}
+	
+	action bool A_UseCheckAmmos()
+	{
+		let plr = RadixShip(self);
+		if(!plr) return false;
+		
+		// Consume energy.
+		if(invoker.energyWeapon) 
+		{
+			if(invoker.AmmoType1 && countinv(invoker.AmmoType1) < invoker.AmmoUse1) return false; 
+			if(invoker.energyUse > plr.energy) 
+			{
+				invoker.idle = true;
+				return false;
+			}
+			A_TakeEnergy(invoker.energyUse);
+		}
+		// Consume ammo.
+		if(invoker.AmmoType1)
+		{
+			if(countinv(invoker.AmmoType1) < invoker.AmmoUse1)
+			{
+				invoker.idle = true;
+				return false;
+			}
+			A_TakeInventory(invoker.AmmoType1,invoker.AmmoUse1);
+		}
+		return true;
+	}
+	
+	action bool A_FireDualBullets(int damage, float spacing, class<Actor> puff="BulletPuff", double range=0, double zoffs=0)
+	{
+		 if(!A_UseCheckAmmos()) return false;
+		 A_FireBullets(0, 0, 1, damage, puff, 0, range, null, 32+zoffs, -spacing);
+		 A_FireBullets(0, 0, 1, damage, puff, 0, range, null, 32+zoffs, spacing);
+		 return true;
+	}
+	
+	// Offset vector position.
+	static Vector2 VOffset(double angle, double xoffs, double yoffs, double dist)
+	{
+		return ( xoffs * cos(angle) - yoffs * sin(angle),
+				 yoffs * cos(angle) + xoffs * sin(angle) )*dist;
+	}
+	
+	action bool A_FireDual(class<Actor> proj, float spacing, float zoffs=0,double forward=1)
+	{
+		let plr = RadixShip(self);
+		if(!plr) return false;
+		invoker.idle = false;
+		
+		if(!A_UseCheckAmmos()) return false;
+		
+		float lendir = plr.radius*forward;
+		
+		// Fire projectile where player is facing. ( minus spacing )
+		vector2 offs = VOffset(plr.angle, lendir, -spacing*0.3, 1);	
+		vector3 spawnpos = plr.Vec3Offset(offs.x,offs.y,8+zoffs);
+		
+		let actproj = Actor(Spawn(proj,spawnpos));
+		if(actproj)
+		{
+			actproj.target = self;
+			actproj.angle = plr.angle-90;
+			actproj.pitch = pitch;
+			actproj.vel = (
+				 cos(plr.angle)*actproj.speed*cos(plr.pitch),
+				 sin(plr.angle)*actproj.speed*cos(plr.pitch),
+				-sin(plr.pitch)*actproj.speed
+			);
+		}
+		invoker.missile_one = actproj;
+		// Fire projectile where player is facing. ( plus spacing )
+		offs = VOffset(plr.angle, lendir, spacing*0.3, 1);	
+		spawnpos = plr.Vec3Offset(offs.x,offs.y,8+zoffs);
+		
+		actproj = Actor(Spawn(proj,spawnpos));
+		if(actproj)
+		{
+			actproj.target = self;
+			actproj.angle = plr.angle-90;
+			actproj.pitch = pitch;
+			actproj.vel = (
+				 cos(plr.angle)*actproj.speed*cos(plr.pitch),
+				 sin(plr.angle)*actproj.speed*cos(plr.pitch),
+				-sin(plr.pitch)*actproj.speed
+			);
+		}
+		invoker.missile_two = actproj;
+		return true;
+	}
+	
+	action bool A_FireSingle(class<Actor> proj, float spacing, float zoffs=0,double forward=1)
+	{
+		let plr = RadixShip(self);
+		if(!plr) return false;
+		invoker.idle = false;
+		
+		float lendir = plr.radius*forward;
+		
+		if(!A_UseCheckAmmos()) return false;
+		
+		// Fire projectile where player is facing. ( minus spacing )
+		vector2 offs = VOffset(plr.angle, lendir, -spacing*0.3, 1);	
+		vector3 spawnpos = plr.Vec3Offset(offs.x,offs.y,8+zoffs);
+		
+		let actproj = Actor(Spawn(proj,spawnpos));
+		if(actproj)
+		{
+			actproj.target = self;
+			actproj.angle = plr.angle-90;
+			actproj.pitch = pitch;
+			actproj.vel = (
+				 cos(plr.angle)*actproj.speed*cos(plr.pitch),
+				 sin(plr.angle)*actproj.speed*cos(plr.pitch),
+				-sin(plr.pitch)*actproj.speed
+			);
+		}
+		invoker.missile_one = actproj;
+		return true;
+	}
+	
+	// Targetting
+	virtual bool CheckTarget(Actor targ)
+	{
+		return true;
+	}
+	
+	Actor, Actor PickTarget()
+	{
+		ThinkerIterator it = ThinkerIterator.Create();
+		Actor act;
+		Actor targ;
+		LookExParams lookp;
+		lookp.maxDist = 1024;
+		lookp.FOV = 90;
+		float adist = -1;
+		while(act = Actor(it.Next()))
+		{
+			//console.printf("Condition checks :> Visible?");
+			if(!Owner.CheckSight(act)) continue;
+			//console.printf("Condition checks :> Player?");
+			if(act == Owner) continue;
+			//console.printf("Condition checks :> Custom?");
+			if(!CheckTarget(act)) continue;
+			//console.printf("Analysing...");
+			
+			if(act.bSHOOTABLE)
+			{
+				float dist = Owner.Distance3D(act);
+				//if(act == self) continue;
+				if(dist < 120) continue;
+				if(dist < adist || adist < 0) 
+				{
+					adist = dist;
+					targ = act;
+				}
+			}
+		}
+		if(targ)
+		{
+			let box = TargetBox(Spawn("TargetBox",targ.pos));
+			if(box)
+			{
+				box.master = self;
+				box.tracer = targ;
+				return targ, box;
+			}
+		}
+		return null, null;
+	}
+
+	States
+	{
+		Select:
+			TNT1 A 1 A_ShowWeaponSelected();
+		SelectRaise:
+			TNT1 A 1 A_Raise(WEAPONTOP);  
+		loop;
+		
+		Deselect:
+			TNT1 A 1 A_Lower(WEAPONBOTTOM);  
+		loop;
+		
+		Ready:
+			TNT1 A 1 
+			{
+				A_WeaponReady(WRF_NOBOB);
+				invoker.idle = true; // Used to detect when it's safe to regen energy.
+			}
+		loop;	
+		
+		Fire:
+			TNT1 A 1 { console.printf("Pew pew"); }
+		goto Ready;
+	}	
+}
+
+class NeutronCannons : RadixWeapon replaces Shotgun
+{
+	Default
+	{
+		Weapon.SlotNumber 1;
+		RadixWeapon.RadixTag "NEUTRON CANNONS";
+		RadixWeapon.SelectedGraphic "NEUTCANN"; // Neuton Cannon sprite.
+		RadixWeapon.isEnergyWeapon true, 0.36, 100;
+		Scale 0.5;
+	}
+	
+	override void StageLevels()
+	{
+		super.StageLevels();
+		if(level==2) energyUse = 0.30; 
+		if(level==3) energyUse = 0.24; 
+	}
+	
+	States
+	{
+		Fire:
+			TNT1 A 1 
+			{
+				// If we successfully fired out NeutronBalls, play the fire sound.
+				if(A_FireDual("NeutronBall",60,2))
+				{
+					A_PlaySound("Radix/NeutronBall/fire",CHAN_WEAPON);
+				}
+				if(invoker.level == 2) A_FireSingle("NeutronBall",0,22);
+				if(invoker.level == 3)
+				{
+					if(A_FireDual("NeutronBall",60,26))
+					{
+						A_PlaySound("Radix/NeutronBall/fire",CHAN_WEAPON+1);
+					}
+				}
+			}
+			TNT1 A 5 
+			{
+				if(invoker.level >= 1) A_SetTics(3);
+			}
+		goto Ready;
+				
+		Spawn:
+			NEUC ABCCBA 8;
+		loop;
+	
+	}
+	
+}
+
+class ExProjectileCannons : RadixWeapon replaces SuperShotgun
+{
+	float fireang;
+	int fireloops;
+
+	Default
+	{
+		Weapon.SlotNumber 2;
+		RadixWeapon.RadixTag "EXPLOSIVE PROJECTILE CANNONS";
+		RadixWeapon.SelectedGraphic "EXPLCANN"; // Explosive Projectile Cannon sprite.
+		Weapon.AmmoType "RadixShells";
+		Weapon.AmmoUse 4;
+		Weapon.AmmoGive 500;
+		Scale 0.5;
+	}
+	
+	override void StageLevels()
+	{
+		let plr = RadixShip(Owner);
+		if(!plr) return;
+		
+		switch(stages)
+		{
+			case 1: plr.SetHudText("Enhanced EPC acquired"); level=1; ammouse1 = 3; selectGraphic = "EXPLCAN2"; break;
+			case 2: plr.SetHudText("Advanced EPC acquired"); level=2; ammouse1 = 4; selectGraphic = "EXPLCAN3"; break;
+			default: // Don't print anything.
+		}
+	}
+	
+	States
+	{
+		Fire:
+			TNT1 A 1 
+			{	
+				if(invoker.level < 2)
+				{
+					if(A_FireDual("ExplosiveBullet",20,-2))
+					{
+						A_StopSound(CHAN_WEAPON);
+						A_PlaySound("Radix/ExplosiveCannon/fire",CHAN_WEAPON);
+					}
+					if(invoker.level == 1)
+					{	
+						if(A_FireDual("ExplosiveBullet",20,8))
+						{
+							A_StopSound(CHAN_WEAPON+1);
+							A_PlaySound("Radix/ExplosiveCannon/fire",CHAN_WEAPON+1);
+						}
+					}
+				}
+				else
+				{
+					// Circular continuous fire.
+					if(countinv("RadixShells") >= invoker.ammouse1)
+					{
+						float xsize = 24;
+						float ysize = 8;
+						float shootang = 0;
+						invoker.fireloops += 2;
+						if(invoker.fireloops > 8) invoker.fireloops = 2;
+						float maxang = 360/invoker.fireloops;
+						for(int i = 0; i < invoker.fireloops; i++)
+						{
+							A_FireSingle("ExplosiveBullet", cos(invoker.fireang)*xsize,4 + (sin(invoker.fireang)*ysize) );
+							A_PlaySound("Radix/ExplosiveCannon/fire",CHAN_WEAPON);
+							A_PlaySound("Radix/ExplosiveCannon/fire",CHAN_WEAPON+1);
+							A_PlaySound("Radix/ExplosiveCannon/fire",CHAN_WEAPON+2);
+							A_TakeInventory("RadixShells",1);
+							invoker.fireang += maxang;
+						}
+					}
+				}
+			}
+			TNT1 A 2;
+			TNT1 A 1 A_ReFire();
+		goto Ready;
+		
+		Spawn:
+			EXCP ABCCBA 8;
+		loop;
+		
+	}	
+}
+
+class PlasmaSpreader : RadixWeapon replaces Chaingun
+{
+	Default
+	{
+		Weapon.SlotNumber 3;
+		RadixWeapon.RadixTag "PLASMA SPREADER";
+		RadixWeapon.SelectedGraphic "PLSMASP"; // Plasma Spreader sprite.
+		Scale 0.5;
+		RadixWeapon.isEnergyWeapon 1, 0.45, 15;
+	}
+	
+	override void StageLevels()
+	{
+		let plr = RadixShip(Owner);
+		if(!plr) return;
+		
+		switch(stages)
+		{
+			case 1: plr.SetHudText("Level 2 " .. WeapName .. " acquired"); level=1; break;
+			case 2: plr.SetHudText("1 powerup required for next level of plasma");  break;
+			case 3: plr.SetHudText("Level 3 " .. WeapName .. " acquired"); level=2; break;
+			case 4: plr.SetHudText("3 powerups required for next level of plasma"); break;
+			case 5: plr.SetHudText("2 powerups required for next level of plasma"); break;
+			case 6: plr.SetHudText("1 powerup required for next level of plasma"); break;
+			case 7: plr.SetHudText("Level 4 " .. WeapName .. " acquired"); level=3; break;
+			default: // Don't print anything.
+		}
+	}
+	
+	States
+	{
+		Fire:
+			TNT1 A 1 
+			{
+				if(A_FireDual("WanderingPlasma",32,-4,1))
+				{	
+					float lamda_mod;
+					A_PlaySound("Radix/PlasmaSpreader/fire",CHAN_WEAPON); // pew pew
+					if(invoker.level == 1) lamda_mod = 4;
+					if(invoker.level == 2) lamda_mod = 8;
+					if(invoker.level == 3) lamda_mod = 28;
+					// Move other plasma in opposite bob direction.
+					if(invoker.missile_one) 
+					{
+						WanderingPlasma(invoker.missile_one).bobdir = 1;
+						WanderingPlasma(invoker.missile_one).bobspd += lamda_mod;
+						WanderingPlasma(invoker.missile_one).bobmax -= 10*invoker.level;
+						if(invoker.level == 3) invoker.missile_one.vel *= 2.5;					
+					}
+					if(invoker.missile_two) 
+					{
+						WanderingPlasma(invoker.missile_two).bobdir = -1;
+						WanderingPlasma(invoker.missile_two).bobspd += lamda_mod;
+						WanderingPlasma(invoker.missile_two).bobmax -= 10*invoker.level;
+						if(invoker.level == 3) invoker.missile_two.vel *= 2.5;
+					}
+				}
+			}
+			TNT1 A 12
+			{
+				if( invoker.level == 1 ) A_SetTics(9);
+				if( invoker.level == 2 ) A_SetTics(6);
+				if( invoker.level >= 3 ) A_SetTics(3);
+			}
+			TNT1 A 1 A_ReFire();
+		goto Ready;
+		
+		Spawn:
+			PLSC ABCCBA 8;
+		loop;
+		
+	}	
+}
+
+// Conventional Missiles
+class ConventionalMissiles : RadixWeapon replaces RocketLauncher
+{
+	Actor targetone;
+	Actor targettwo;
+	Actor boxone;
+	Actor boxtwo;
+
+	Default
+	{
+		Weapon.SlotNumber 4;
+		RadixWeapon.RadixTag "Conventional Missiles";
+		RadixWeapon.SelectedGraphic "CONVMISS";
+		Weapon.AmmoType "RadixMissiles";
+		Weapon.AmmoUse 2;
+		Weapon.AmmoGive 50;
+		Scale 0.5;
+	}
+	
+	void ResetTarget(int num=0)
+	{
+		if(num == 1 || num == 0)
+		{
+			if(boxone) boxone.Die(boxone, self);
+			if(targetone) targetone = null;
+		}
+		if(num == 2 || num == 0)
+		{
+			if(boxtwo) boxtwo.Die(boxtwo, self);
+			if(targettwo) targettwo = null;
+		}
+	}
+	
+	override bool CheckTarget(Actor targ)
+	{
+		if(targ == targetone) return false;
+		if(Distance3D(targ) < 200) return false;
+		return true;
+	}
+	
+	override void StageLevels() {}
+	
+	override void tick()
+	{
+		if(!missile_one && targetone) ResetTarget(1);
+		if(!missile_two && targettwo) ResetTarget(2);
+		super.tick();
+	}
+	
+	States
+	{
+		Fire:
+			TNT1 A 1 
+			{
+				invoker.ResetTarget();
+				[invoker.targetone, invoker.boxone] = invoker.PickTarget();
+				[invoker.targettwo, invoker.boxtwo] = invoker.PickTarget();
+				if(invoker.targettwo == null)
+					invoker.targettwo = invoker.targetone;
+				
+				if(A_FireDual("RadixMissile",25,-8,1.6))
+				{
+					// Missiles must be assigned a master to pass onto the target boxes.
+					invoker.missile_one.angle+=90;
+					invoker.missile_two.angle+=90;
+					if(invoker.targetone && invoker.targettwo)
+					{
+						invoker.missile_one.master = self;
+						invoker.missile_one.tracer = invoker.targettwo;
+						invoker.missile_one.angle = invoker.missile_one.AngleTo(invoker.targettwo);
+						invoker.missile_two.master = self;
+						invoker.missile_two.tracer = invoker.targetone;
+						invoker.missile_two.angle = invoker.missile_two.AngleTo(invoker.targetone);
+					}
+					A_PlaySound("Radix/ConvMissiles/fire",CHAN_WEAPON);
+				}
+			}
+			TNT1 A 24;
+		goto Ready;
+				
+		Spawn:
+			CONM ABCCBA 8;
+		loop;
+	
+	}	
+}
+
+// Nuke
+class NuclearMissiles : RadixWeapon
+{
+	bool cycle;
+
+	Actor targetone;
+	Actor boxone;
+	
+	void ResetTarget()
+	{
+		if(boxone) boxone.Die(boxone, self);
+		if(targetone) targetone = null;
+	}
+	
+	action void PlayerTarget()
+	{
+		let plr = RadixShip(self);
+		if(!plr) return;
+		invoker.ResetTarget();
+		
+		if(plr.hastarget) 
+		{
+			invoker.targetone = plr.locked_target;
+			let box = TargetBox(Spawn("TargetBox",invoker.targetone.pos));
+			if(box)
+			{
+				invoker.boxone = box;
+				box.master = self;
+				box.tracer = plr.locked_target;
+			}
+		}
+	}
+	
+	override void StageLevels() {}
+	
+	override void tick()
+	{
+		if(!missile_one && targetone) ResetTarget();
+		super.tick();
+	}
+
+	Default
+	{
+		Weapon.SlotNumber 5;
+		RadixWeapon.RadixTag "Nuclear Missiles";
+		RadixWeapon.SelectedGraphic "NUKEWEAP"; // Explosive Projectile Cannon sprite.
+		Weapon.AmmoType "RadixNukes";
+		Weapon.AmmoUse 1;
+		Weapon.AmmoGive 2;
+		Scale 0.5;
+	}
+
+	States
+	{
+		Fire:
+			TNT1 A 1 
+			{	
+				PlayerTarget();
+			
+				if(A_FireSingle("RadixNuke", invoker.cycle ? -32 : 32,-8,1.6)) 					
+				{
+					if(invoker.targetone)invoker.missile_one.tracer = invoker.targetone;
+					invoker.missile_one.angle += 90;
+					A_StopSound(CHAN_WEAPON);
+					A_PlaySound("Radix/Nuke/fire",CHAN_WEAPON);
+					invoker.cycle = !invoker.cycle;
+				}
+			}
+			TNT1 A 16;
+		goto Ready;
+		
+		Spawn:
+			NUCW ABCCBA 8;
+		loop;
+		
+	}	
+}
+
+// Torpedos
+class PhaseTorpedos : RadixWeapon replaces PlasmaRifle
+{
+	Actor targ_one;
+	Actor targ_two;
+	Actor targ_three;
+
+	bool cycle;
+	
+	Default
+	{
+		Weapon.SlotNumber 6;
+		RadixWeapon.RadixTag "Phase Torpedos";
+		RadixWeapon.SelectedGraphic "PHASTORP";
+		Weapon.AmmoType "RadixTorpedos";
+		Weapon.AmmoUse 3;
+		Weapon.AmmoGive 15;
+		Scale 0.5;
+	}
+	
+	override bool CheckTarget(Actor targ)
+	{
+		if(targ == targ_one) return false;
+		if(targ == targ_two) return false;
+		if(Distance3D(targ) < 200) return false;
+		return true;
+	}
+	
+	Actor, Actor PickGetTarget(int num)
+	{
+		Actor t;
+		Actor b;
+		[t, b] = PickTarget();
+		if(num == 0) targ_one = t;
+		if(num == 1) targ_two = t;
+		if(num == 2) targ_three = t;
+		return t, b;
+	}
+	
+	void ResetTargets()
+	{
+		targ_one = null;
+		targ_two = null;
+		targ_three = null;
+	}
+	
+	override void StageLevels() {}
+		
+	States
+	{
+		Fire:
+			TNT1 A 1 
+			{
+				invoker.ResetTargets();
+				if(A_FireSingle("RadixTorpedo",invoker.cycle ? -70 : 80,-4))
+				{
+					A_PlaySound("Radix/PhaseTorpedos/fire",CHAN_WEAPON);
+					// Setup torpedos, use inital target.
+					Actor box;
+					[invoker.targ_one, box] = invoker.PickTarget();
+					invoker.missile_one.angle += 90;
+					
+					RadixTorpedo(invoker.missile_one).box = box;
+					RadixTorpedo(invoker.missile_one).shooter = PhaseTorpedos(invoker);
+					invoker.missile_one.tracer = invoker.targ_one;
+					invoker.cycle = !invoker.cycle;
+				}
+			}
+			TNT1 A 12;
+		goto Ready;
+				
+		Spawn:
+			PHTP ABCCBA 8;
+		loop;
+	
+	}	
+}
+
+// Gravity Wave
+class GravityWave : RadixWeapon 
+{
+	Default
+	{
+		Weapon.SlotNumber 7;
+		RadixWeapon.RadixTag "Gravity Wave";
+		RadixWeapon.SelectedGraphic "GRVWAVE"; // Neuton Cannon sprite.
+		RadixWeapon.isEnergyWeapon true, 75, 100;
+		Weapon.AmmoType "GravityWaves";
+		Weapon.AmmoUse 1;
+		Weapon.AmmoGive 5;
+		Weapon.Kickback 0;
+		Scale 0.5;
+	}
+	
+	override void StageLevels() {}
+	
+	States
+	{
+		Fire:
+			TNT1 A 1 
+			{
+				A_FireSingle("GravityWaveProj",0,4);
+			}
+			TNT1 A 20;
+		goto Ready;
+				
+		Spawn:
+			GRAW ABCCBA 8;
+		loop;
+	
+	}
+	
+}
+
+// Resolving Gravity Wave and Nuke
+class RadixBFGReplacer : Actor replaces BFG9000
+{
+	override void PostBeginPlay()
+	{
+		int pickmod = CVar.FindCVar("radix_bfgtype").getInt();
+		int pick = random(0,100);
+		if(pickmod == 0)
+		{
+			if(pick <= 25) Spawn("GravityWave",pos); 
+			if(pick  > 25) Spawn("NuclearMissiles",pos);
+		}
+		else
+		{
+			if(pickmod == 2) Spawn("GravityWave",pos); 
+			if(pickmod == 1) Spawn("NuclearMissiles",pos);
+		}
+		Die(self,self);
+	}
+}
+

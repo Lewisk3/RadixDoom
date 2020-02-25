@@ -1,0 +1,15 @@
+
+class Radix_EventHandler : StaticEventHandler
+{
+	override void NetworkProcess(ConsoleEvent e)
+	{
+		PlayerInfo plrInfo = players[e.Player];
+		if(plrInfo)
+		{
+			String event = e.Name;
+			event.toLower();
+			
+			if(event == "rdx_useplasma") plrInfo.mo.giveInventory("btn_useplasma", 1);
+		}
+	}
+}
