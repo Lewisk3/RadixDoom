@@ -70,7 +70,7 @@ class Radix_HUD : BaseStatusBar
 		timers.Resize(4); // Setup powerup blink timers.
 
 		// Create the font used for the fullscreen HUD
-		Font fnt = "dbigfont";
+		Font fnt = "bigfont";
 		mHUDFont = HUDFont.Create(fnt);
 		numFont = "RADIXNUMFONT";
 	}
@@ -237,7 +237,7 @@ class Radix_HUD : BaseStatusBar
 		{
 			double basescale = clamp(1.0 * (hud_scale*0.5), 1.0, 10.0);
 			vector2 fScale = (1.0*basescale, 1.0*basescale);
-			RD_SBS.DrawString("dbigfont",TmpHUDText,(16,16),0,Font.CR_ORANGE,scale:fScale);
+			RD_SBS.DrawString("bigfont",TmpHUDText,(16,16),0,Font.CR_ORANGE,scale:fScale);
 		}
 	}
 	
