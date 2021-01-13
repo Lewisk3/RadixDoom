@@ -59,6 +59,7 @@ class RadixShip : EmptyShip
 	HUDVars hVars;
 
 	// Bools
+	bool groundship;
 	bool backingup;
 	bool boosting;
 	bool powerup;
@@ -97,17 +98,19 @@ class RadixShip : EmptyShip
 	property SetupEnergy : maxenergy, energyregen;
 	property SetupShields : shields, maxShields, shieldregen;
 	property IdleBob      : bobspd, bobmaxz;
+	property ShipHasLegs : groundship;
 
 	Default
 	{
 		DamageFactor "RadixExplosivePuff", 0;
 		Mass 100;
-		RadixShip.Move .65, 0.97;
+		RadixShip.Move .65, 1.5;
 		RadixShip.LockOnSpeed 0.08;
 		RadixShip.CPitch -50, 50;
 		RadixShip.SetupEnergy 100, 0.01;
 		RadixShip.SetupShields 500, 500, 0.05;
 		RadixShip.IdleBob 0.26, 8;
+		RadixShip.ShipHasLegs false;
 		Player.StartItem "NeutronCannons";
 	}
 	
@@ -183,7 +186,7 @@ class RadixShip : EmptyShip
 	void PitchThrust(float poff=0,float maxspd=5)
 	{
 		vel.z -= sin(pitch+poff)*dfriction;
-		vel.z = clamp(vel.z, -maxspd, maxspd);
+		vel.z = clamp(vel.z, -maxspd*15, maxspd*15);
 	}
 	
 	RadixWeapon GetInitialWeapon(String weap, RadixWeapon notw=null)
@@ -203,82 +206,37 @@ class RadixShip : EmptyShip
 	
 	override void MovePlayer ()
 	{
-		if(CheckVoodoo()) super.MovePlayer(); 
-		
-		// Spawn collider's when moving.	
-		if(health >= 0 && vel.length() != 0)
+		if(CheckVoodoo() || groundship) 
 		{
-			int angmod = 10;
-			for(int i = 0; i < 360/angmod; i++)
-			{
-				int xp = pos.x + cos(angle+(i*angmod))*(radius*2);
-				int yp = pos.y + sin(angle+(i*angmod))*(radius*2);
-				vector3 colpos = ( xp, yp, pos.z );
-				let col = Actor(Spawn("ShipCollider",colpos,ALLOW_REPLACE));
-				if(col) col.angle = angle+(i*angmod);
-			}
+			super.MovePlayer(); 
+			return;
 		}
-		
-		let player = self.player;
+				
+		// Custom simplified move code.
 		UserCmd cmd = player.cmd;
 
-		// [RH] 180-degree turn overrides all other yaws
-		if (player.turnticks)
-		{
-			player.turnticks--;
-			Angle += (180. / TURN180_TICKS);
-		}
-		else
-		{
-			Angle += cmd.yaw * (360./65536.);
-		}
-
+		angle += cmd.yaw * (360./65536.);
 		player.onground = (pos.z <= floorz) || bOnMobj || bMBFBouncer || (player.cheats & CF_NOCLIP2);
-
 		if (cmd.forwardmove | cmd.sidemove)
 		{
-			double forwardmove, sidemove;
-			double friction, movefactor;
-			double fm, sm;
-
-			[friction, movefactor] = GetFriction();
-
-			fm = cmd.forwardmove;
-			sm = cmd.sidemove;
-			[fm, sm] = TweakSpeeds (fm, sm);
-			fm *= Speed / 256;
-			sm *= Speed / 256;
-
+			double movetics = (Speed / 256.) * (.05 * (35 / TICRATE));
+			vector2 movedir = (cmd.forwardmove, cmd.sidemove) * movetics;
+			if(movedir.x)ForwardThrust(movedir.x, angle);
+			if(movedir.y)Thrust(movedir.y, angle-90);
 			
-			forwardmove = fm * .05 * (35 / TICRATE);
-			sidemove = sm * .05 * (35 / TICRATE);
-
-			if (forwardmove )
-			{
-				ForwardThrust(forwardmove, Angle);
-			}
-			if (sidemove)
-			{
-				let a = Angle - 90;
-				Thrust(sidemove, a);
-			}
-
-			if (!(player.cheats & CF_PREDICTING) && (forwardmove != 0 || sidemove != 0))
-			{
-				PlayRunning ();
-			}
-
-			if (player.cheats & CF_REVERTPLEASE)
-			{
-				player.cheats &= ~CF_REVERTPLEASE;
-				player.camera = player.mo;
-			}
-
+			if (!(player.cheats & CF_PREDICTING) && (movedir.x+movedir.y != 0))
+				PlayRunning();
 		}
 	}		
 	
 	void update_movement()
 	{
+		if(groundship) 
+		{	
+			A_SetSpeed(1.0);
+			return;
+		}
+	
 		uint btns = player.cmd.buttons;
 		
 		energy = clamp(energy,0,maxenergy);
@@ -291,14 +249,14 @@ class RadixShip : EmptyShip
 		{
 			backingup = false; 
 			throttle += .1;
-			PitchThrust(0,speed*15);
+			PitchThrust(0,speed);
 			speed = dspd*throttle;
 		}
 		if(btns & BT_BACK) 
 		{ 
 			backingup = true;
 			throttle += .1;
-			PitchThrust(180,speed*15);
+			PitchThrust(180,speed);
 			speed = dspd*throttle;
 		} else { backingup = false; } 
 		
@@ -328,7 +286,7 @@ class RadixShip : EmptyShip
 		{
 			vel *= 0.88;
 			if(throttle > 0) throttle -= .3;
-			if(health > 0)BobZ(); // Bob up and down when idle.
+			if(health > 0) BobZ(); // Bob up and down when idle.
 		}
 		else
 		{
@@ -381,7 +339,6 @@ class RadixShip : EmptyShip
 		}
 		if(health > (maxhealth*0.25) && lowarmorplaying) 
 		{
-			console.printf("Stop sound");
 			lowarmorplaying = false;
 			A_StopSound(CHAN_5);
 		}
@@ -482,8 +439,12 @@ class RadixShip : EmptyShip
 			return;
 		}
 		
-		// If Gravity 0 is given as a default, walkover linedefs will NOT trigger.
-		bNoGravity = true; 
+		if(groundship)
+		{
+			ViewBob = 1.0;
+			ViewHeight = 41;
+			defviewheight = 41;
+		}
 		
 		shield_damagemod = 1; // Default damage.
 		
@@ -494,7 +455,18 @@ class RadixShip : EmptyShip
 			angle = start_angle;
 			pitch = 0;
 		}
-		if(health <= 0) vel *= 0.8;
+		
+		if(health <= 0) 
+		{
+			vel *= 0.8;
+			bNOGRAVITY = false;
+		}
+		else if(!groundship)
+		{
+			// If Gravity 0 is given as a default, walkover linedefs will NOT trigger.
+			bNoGravity = true; 
+		}
+		
 		if(!powerup && health > 0)update_movement();
 		update_weapons();	
 		CheckThreat();
@@ -527,7 +499,7 @@ class RadixShip : EmptyShip
 		if(bombcooldown > 0) bombcooldown --;
 		
 		super.Tick();
-		if(height != 28)A_SetSize(16,28);
+		if(height != 28 && !groundship) A_SetSize(16,28);
 	}
 	
 	override void PostBeginPlay()

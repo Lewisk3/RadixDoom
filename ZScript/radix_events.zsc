@@ -12,4 +12,21 @@ class Radix_EventHandler : StaticEventHandler
 			if(event == "rdx_useplasma") plrInfo.mo.giveInventory("btn_useplasma", 1);
 		}
 	}
+	
+	override void CheckReplacement(ReplaceEvent e)
+	{
+		if(e.Replacee is "BFG9000")
+		{
+			int pick = random(0,100);
+			switch(radix_bfgtype)
+			{
+				case 0:
+					if(pick <= 25) e.Replacement = "GravityWave";
+					if(pick  > 25) e.Replacement = "NuclearMissiles";
+				break;
+				case 1: e.Replacement = "GravityWave"; break;
+				case 2: e.Replacement = "NuclearMissiles"; break;
+			}
+		}
+	}
 }

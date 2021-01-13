@@ -319,3 +319,20 @@ class RadixShip : ImmobilePlayer
 		super.postBeginPlay();
 	}
 }
+
+
+		// Spawn collider's when moving.	
+		/*
+		if(health >= 0 && vel.length() != 0)
+		{
+			int angmod = 10;
+			for(int i = 0; i < 360/angmod; i++)
+			{
+				int xp = pos.x + cos(angle+(i*angmod))*(radius*2);
+				int yp = pos.y + sin(angle+(i*angmod))*(radius*2);
+				vector3 colpos = ( xp, yp, pos.z );
+				let col = Actor(Spawn("ShipCollider",colpos,ALLOW_REPLACE));
+				if(col) col.angle = angle+(i*angmod);
+			}
+		}
+		*/

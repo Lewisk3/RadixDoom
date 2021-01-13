@@ -140,11 +140,12 @@ class RadixWeapon : Weapon
 		
 		if(!A_UseCheckAmmos()) return false;
 		
-		float lendir = plr.radius*forward;
+		double lendir = plr.radius*forward;
+		double addz = plr.groundship ? 32 : 8; 
 		
 		// Fire projectile where player is facing. ( minus spacing )
 		vector2 offs = VOffset(plr.angle, lendir, -spacing*0.3, 1);	
-		vector3 spawnpos = plr.Vec3Offset(offs.x,offs.y,8+zoffs);
+		vector3 spawnpos = plr.Vec3Offset(offs.x,offs.y,addz+zoffs);
 		
 		let actproj = Actor(Spawn(proj,spawnpos));
 		if(actproj)
@@ -161,7 +162,7 @@ class RadixWeapon : Weapon
 		invoker.missile_one = actproj;
 		// Fire projectile where player is facing. ( plus spacing )
 		offs = VOffset(plr.angle, lendir, spacing*0.3, 1);	
-		spawnpos = plr.Vec3Offset(offs.x,offs.y,8+zoffs);
+		spawnpos = plr.Vec3Offset(offs.x,offs.y,addz+zoffs);
 		
 		actproj = Actor(Spawn(proj,spawnpos));
 		if(actproj)
@@ -185,13 +186,14 @@ class RadixWeapon : Weapon
 		if(!plr) return false;
 		invoker.idle = false;
 		
-		float lendir = plr.radius*forward;
+		double lendir = plr.radius*forward;
+		double addz = plr.groundship ? 32 : 8; 
 		
 		if(!A_UseCheckAmmos()) return false;
 		
 		// Fire projectile where player is facing. ( minus spacing )
 		vector2 offs = VOffset(plr.angle, lendir, -spacing*0.3, 1);	
-		vector3 spawnpos = plr.Vec3Offset(offs.x,offs.y,8+zoffs);
+		vector3 spawnpos = plr.Vec3Offset(offs.x,offs.y,addz+zoffs);
 		
 		let actproj = Actor(Spawn(proj,spawnpos));
 		if(actproj)
@@ -772,25 +774,3 @@ class GravityWave : RadixWeapon
 	}
 	
 }
-
-// Resolving Gravity Wave and Nuke
-class RadixBFGReplacer : Actor replaces BFG9000
-{
-	override void PostBeginPlay()
-	{
-		int pickmod = CVar.FindCVar("radix_bfgtype").getInt();
-		int pick = random(0,100);
-		if(pickmod == 0)
-		{
-			if(pick <= 25) Spawn("GravityWave",pos); 
-			if(pick  > 25) Spawn("NuclearMissiles",pos);
-		}
-		else
-		{
-			if(pickmod == 2) Spawn("GravityWave",pos); 
-			if(pickmod == 1) Spawn("NuclearMissiles",pos);
-		}
-		Die(self,self);
-	}
-}
-
